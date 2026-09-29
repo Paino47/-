@@ -9,7 +9,7 @@ const DEFAULTS = {
   enabled:true, autoCharacter:true, fallbackGlobal:true, autoplay:false, volume:.7,
   currentTheme:'default', music:{global:{playlist:[]},characters:{}}, themes:{default:DEFAULT_THEME}
 };
-let S, audio, root, player, songIndex=0, settingsLoaded=false;
+let S, audio, root, player, songIndex=0, settingsLoaded=false, initialized=false;
 
 const ctx=()=>{try{return SillyTavern.getContext()}catch{return {}}};
 const clone=x=>JSON.parse(JSON.stringify(x));
@@ -134,4 +134,18 @@ function bindEvents(){
   if(es&&et.CHAT_CHANGED)es.on(et.CHAT_CHANGED,()=>{songIndex=0;audio.pause();if(S.autoplay&&playlist().length)load(0,true);else refresh();refreshSettings()});
   let last=charKey();setInterval(()=>{const k=charKey();if(k!==last){last=k;songIndex=0;audio.pause();if(S.autoCharacter&&S.autoplay&&playlist().length)load(0,true);else refresh();refreshSettings()}},1000);
 }
-export async function init(){ensure();build();await loadSettingsPanel();bindEvents();refresh();console.info('[酒馆音乐小组件] v0.1.0 已加载')}
+export async function init(){
+  if(initialized)return;
+  initialized=true;
+  ensure();
+  build();
+  await loadSettingsPanel();
+  bindEvents();
+  refresh();
+  console.info('[酒馆音乐小组件] v0.1.2 已加载');
+}
+
+// 兼容没有执行 manifest hooks.activate 的酒馆版本，同时用 initialized 防止重复初始化。
+if(typeof jQuery==='function'){
+  jQuery(()=>{init().catch(err=>console.error('[酒馆音乐小组件] 初始化失败',err));});
+}
