@@ -1,105 +1,137 @@
-(() => {
-    'use strict';
+const MODULE = 'sillytavern_music_widget';
+const DEFAULT_THEME = {
+  schemaVersion: 1, id: 'default', name: '默认主题', author: '元素四十七',
+  version: '1.0.0', description: '基础主题',
+  variables: { accent:'#9acbff', panel:'rgba(10,16,28,.94)', text:'#eef4ff', border:'rgba(154,203,255,.35)', button:'rgba(255,255,255,.08)', launcherImage:'', backgroundImage:'' },
+  css: ''
+};
+const DEFAULTS = {
+  enabled:true, autoCharacter:true, fallbackGlobal:true, autoplay:false, volume:.7,
+  currentTheme:'default', music:{global:{playlist:[]},characters:{}}, themes:{default:DEFAULT_THEME}
+};
+let S, audio, root, player, songIndex=0, settingsLoaded=false;
 
-    const KEY = 'st_music_widget_v01';
-    const THEMES = ['default', 'gufeng', 'blue-black', 'sakura'];
-    const state = load();
-    let currentIndex = 0;
-    let audio = null;
-    let root = null;
-    let panelOpen = false;
+const ctx=()=>{try{return SillyTavern.getContext()}catch{return {}}};
+const clone=x=>JSON.parse(JSON.stringify(x));
+function ensure(){
+  const c=ctx(), store=c.extensionSettings||window.extension_settings||{};
+  store[MODULE] ||= clone(DEFAULTS); S=store[MODULE];
+  S.music ||= clone(DEFAULTS.music); S.music.global ||= {playlist:[]}; S.music.characters ||= {};
+  S.themes ||= {default:clone(DEFAULT_THEME)}; S.themes.default ||= clone(DEFAULT_THEME);
+  if(!S.themes[S.currentTheme])S.currentTheme='default';
+  S.enabled=S.enabled!==false; S.volume=Number.isFinite(S.volume)?S.volume:.7;
+  if(c.extensionSettings)c.extensionSettings[MODULE]=S;
+}
+function save(){try{ctx().saveSettingsDebounced?.()}catch{}}
+function charKey(){
+  const c=ctx(), i=Number.isInteger(c.this_chid)?c.this_chid:(Number.isInteger(window.this_chid)?window.this_chid:-1);
+  const list=c.characters||window.characters||[], ch=list[i]; return ch?String(ch.avatar||ch.name||i):null;
+}
+function charName(){
+  const c=ctx(), i=Number.isInteger(c.this_chid)?c.this_chid:(Number.isInteger(window.this_chid)?window.this_chid:-1);
+  const list=c.characters||window.characters||[], ch=list[i]; return ch?.name||ch?.data?.name||'';
+}
+function chars(){
+  const c=ctx(), list=c.characters||window.characters||[];
+  return list.map((x,i)=>({key:String(x.avatar||x.name||i),name:x.name||x.data?.name||('角色 '+(i+1))}));
+}
+function playlist(){
+  const k=charKey();
+  if(S.autoCharacter&&k){
+    const p=S.music.characters[k]?.playlist||[];
+    if(p.length||!S.fallbackGlobal)return p;
+  }
+  return S.music.global.playlist||[];
+}
+function scopeList(k){
+  if(k==='global')return S.music.global.playlist;
+  S.music.characters[k] ||= {name:k,playlist:[]};
+  S.music.characters[k].playlist ||= [];
+  return S.music.characters[k].playlist;
+}
+function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function time(v){if(!Number.isFinite(v))return'0:00';return Math.floor(v/60)+':'+String(Math.floor(v%60)).padStart(2,'0')}
 
-    function load() {
-        try { return Object.assign({ mode: 'character', theme: 'default', autoSwitch: true, volume: 0.7, global: [], characters: {} }, JSON.parse(localStorage.getItem(KEY) || '{}')); }
-        catch { return { mode:'character', theme:'default', autoSwitch:true, volume:0.7, global:[], characters:{} }; }
-    }
-    function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
-    function esc(v='') { return String(v).replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\\':'&#92;'}[c])); }
-    function currentCharacter() {
-        const name = window.this_chid != null && Array.isArray(window.characters) && window.characters[window.this_chid] ? (window.characters[window.this_chid].name || '') : '';
-        const id = window.this_chid != null ? String(window.this_chid) : name;
-        return { id, name };
-    }
-    function list() { return state.mode === 'global' ? state.global : (state.characters[currentCharacter().id] || []); }
-    function ensureChar() { const id = currentCharacter().id; if (!state.characters[id]) state.characters[id] = []; return state.characters[id]; }
-    function ensureAudio() {
-        if (!audio) {
-            audio = new Audio(); audio.preload='metadata'; audio.volume=Number(state.volume)||0.7;
-            audio.addEventListener('timeupdate', renderProgress); audio.addEventListener('loadedmetadata', renderProgress);
-            audio.addEventListener('ended', () => { if (list().length > 1) { currentIndex=(currentIndex+1)%list().length; playCurrent(); } else { render(); } });
-            audio.addEventListener('error', () => setStatus('无法播放：请检查 URL 是否为可直接播放的音频文件。'));
-        }
-        return audio;
-    }
-    function setStatus(s) { const el=root?.querySelector('.stmw-status'); if(el) el.textContent=s; }
-    function playCurrent() {
-        const songs=list(); if(!songs.length){ render(); return; }
-        if(currentIndex >= songs.length) currentIndex=0;
-        const song=songs[currentIndex], a=ensureAudio(); a.src=song.url; a.volume=Number(state.volume)||0.7;
-        a.play().then(()=>setStatus('')).catch(()=>setStatus('浏览器阻止了自动播放，请点击播放。'));
-        render();
-    }
-    function renderProgress(){ if(!root||!audio)return; const p=root.querySelector('.stmw-progress'); const time=root.querySelector('.stmw-time'); if(p&&audio.duration) p.value=(audio.currentTime/audio.duration)*100; if(time) time.textContent=`${fmt(audio.currentTime)} / ${fmt(audio.duration)}`; }
-    function fmt(n){ if(!Number.isFinite(n))return '00:00'; const m=Math.floor(n/60),s=Math.floor(n%60); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
-
-    function build() {
-        root=document.createElement('div'); root.id='st-music-widget';
-        document.body.appendChild(root); render();
-    }
-    function render() {
-        if(!root)return;
-        root.dataset.theme=state.theme;
-        const songs=list(), char=currentCharacter(), song=songs[currentIndex] || null;
-        root.innerHTML=`
-          <button class="stmw-fab" title="音乐播放器">♫</button>
-          <section class="stmw-panel ${panelOpen?'is-open':''}">
-            <header><div><strong>音乐播放器</strong><small>${esc(state.mode==='global'?'全局音乐':(char.name||'当前角色'))}</small></div><button class="stmw-close">×</button></header>
-            <div class="stmw-cover">${song?.cover ? `<img src="${esc(song.cover)}">` : '<span>♫</span>'}</div>
-            <div class="stmw-title">${esc(song?.name || '还没有歌曲')}</div>
-            <div class="stmw-status"></div>
-            <input class="stmw-progress" type="range" min="0" max="100" value="0">
-            <div class="stmw-time">00:00 / 00:00</div>
-            <div class="stmw-controls"><button data-act="prev">⏮</button><button class="stmw-play" data-act="play">${audio&&!audio.paused?'❚❚':'▶'}</button><button data-act="next">⏭</button></div>
-            <div class="stmw-volume"><span>🔊</span><input class="stmw-vol" type="range" min="0" max="1" step="0.01" value="${Number(state.volume)||0.7}"></div>
-            <div class="stmw-tabs"><button class="${state.mode==='character'?'active':''}" data-mode="character">角色</button><button class="${state.mode==='global'?'active':''}" data-mode="global">全局</button><button data-open="settings">⚙ 美化/管理</button></div>
-            <div class="stmw-list">${songs.map((x,i)=>`<button class="stmw-song ${i===currentIndex?'active':''}" data-song="${i}"><span>${i+1}. ${esc(x.name||'未命名')}</span><b>▶</b></button>`).join('') || '<div class="stmw-empty">暂无歌曲</div>'}</div>
-          </section>`;
-        bind(); renderProgress();
-    }
-    function bind(){
-        root.querySelector('.stmw-fab').onclick=()=>{panelOpen=!panelOpen; root.querySelector('.stmw-panel').classList.toggle('is-open',panelOpen);};
-        root.querySelector('.stmw-close').onclick=()=>{panelOpen=false;root.querySelector('.stmw-panel').classList.remove('is-open');};
-        root.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{ const songs=list(); if(!songs.length)return; if(b.dataset.act==='play'){ensureAudio(); if(audio.src&&audio.paused)audio.play();else if(audio.src)audio.pause();else playCurrent();} if(b.dataset.act==='prev'){currentIndex=(currentIndex-1+songs.length)%songs.length;playCurrent();} if(b.dataset.act==='next'){currentIndex=(currentIndex+1)%songs.length;playCurrent();} render(); });
-        root.querySelectorAll('[data-song]').forEach(b=>b.onclick=()=>{currentIndex=Number(b.dataset.song);playCurrent();});
-        root.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{state.mode=b.dataset.mode;currentIndex=0;save();render();});
-        root.querySelector('[data-open="settings"]').onclick=openSettings;
-        root.querySelector('.stmw-progress').oninput=e=>{if(audio?.duration)audio.currentTime=audio.duration*(Number(e.target.value)/100);};
-        root.querySelector('.stmw-vol').oninput=e=>{state.volume=Number(e.target.value);ensureAudio().volume=state.volume;save();};
-    }
-    function openSettings(){
-        const old=root.querySelector('.stmw-modal'); old?.remove();
-        const songs=list();
-        const modal=document.createElement('div'); modal.className='stmw-modal';
-        modal.innerHTML=`<div class="stmw-dialog"><header><strong>音乐管理 / 美化</strong><button class="stmw-modal-close">×</button></header>
-          <label>播放器美化 <select class="stmw-theme">${THEMES.map(t=>`<option value="${t}" ${t===state.theme?'selected':''}>${label(t)}</option>`).join('')}</select></label>
-          <label class="stmw-check"><input class="stmw-auto" type="checkbox" ${state.autoSwitch?'checked':''}> 切换角色时自动切换角色歌单</label>
-          <div class="stmw-form"><input class="stmw-name" placeholder="歌曲名字"><input class="stmw-url" placeholder="音频 URL（mp3/ogg/wav/m4a）"><input class="stmw-cover" placeholder="封面 URL（可选）"><button class="stmw-add">＋ 添加歌曲</button></div>
-          <div class="stmw-manage">${songs.map((x,i)=>`<div><span>${esc(x.name||'未命名')}</span><button data-del="${i}">删除</button></div>`).join('') || '<em>暂无歌曲</em>'}</div>
-          <p class="stmw-hint">当前编辑：${esc(state.mode==='global'?'全局音乐':(currentCharacter().name||'当前角色'))}</p>
-        </div>`;
-        root.appendChild(modal);
-        modal.querySelector('.stmw-modal-close').onclick=()=>modal.remove();
-        modal.querySelector('.stmw-theme').onchange=e=>{state.theme=e.target.value;save();render();openSettings();};
-        modal.querySelector('.stmw-auto').onchange=e=>{state.autoSwitch=e.target.checked;save();};
-        modal.querySelector('.stmw-add').onclick=()=>{const n=modal.querySelector('.stmw-name').value.trim(),u=modal.querySelector('.stmw-url').value.trim(),c=modal.querySelector('.stmw-cover').value.trim();if(!n||!u)return; (state.mode==='global'?state.global:ensureChar()).push({name:n,url:u,cover:c});save();render();openSettings();};
-        modal.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{(state.mode==='global'?state.global:ensureChar()).splice(Number(b.dataset.del),1);currentIndex=0;save();render();openSettings();});
-    }
-    function label(t){return ({'default':'默认','gufeng':'古风','blue-black':'蓝黑','sakura':'樱花'})[t]||t;}
-
-    function hookCharacterSwitch(){
-        let last=currentCharacter().id;
-        setInterval(()=>{const now=currentCharacter().id;if(now!==last){last=now;currentIndex=0;if(state.autoSwitch&&state.mode==='character'&&list().length)playCurrent();else render();}},800);
-    }
-    function init(){ if(document.getElementById('st-music-widget'))return; build(); hookCharacterSwitch(); }
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-})();
+function applyTheme(){
+  const t=S.themes[S.currentTheme]||DEFAULT_THEME,v=t.variables||{};
+  let el=document.getElementById('stw-theme-style');
+  if(!el){el=document.createElement('style');el.id='stw-theme-style';document.head.appendChild(el)}
+  const bg=v.backgroundImage?String(v.backgroundImage).replace(/"/g,'\\\"'):'';
+  const launch=v.launcherImage?String(v.launcherImage).replace(/"/g,'\\\"'):'';
+  el.textContent=':root{--stw-accent:'+ (v.accent||'#9acbff') +';--stw-panel:'+(v.panel||'rgba(10,16,28,.94)')+';--stw-text:'+(v.text||'#eef4ff')+';--stw-border:'+(v.border||'rgba(154,203,255,.35)')+';--stw-button:'+(v.button||'rgba(255,255,255,.08)')+';--stw-launcher-image:'+(launch?'url("'+launch+'")':'none')+';--stw-bg-image:'+(bg?'url("'+bg+'")':'none')+';}#stw-root{'+(t.css||'')+'}';
+}
+function build(){
+  if(root)return;
+  root=document.createElement('div');root.id='stw-root';
+  root.innerHTML='<div id="stw-player"><div class="stw-player-inner"><div class="stw-now"><img class="stw-cover" alt=""><div class="stw-now-main"><div class="stw-now-title">暂无歌曲</div><div class="stw-now-sub">酒馆音乐小组件</div></div></div><div class="stw-controls"><button class="stw-control" data-act="prev">⏮</button><button class="stw-control play" data-act="play">▶</button><button class="stw-control" data-act="next">⏭</button></div><input class="stw-progress" data-act="seek" type="range" min="0" max="100" value="0"><div class="stw-time"><span data-time="cur">0:00</span><span data-time="dur">0:00</span></div><input class="stw-volume" data-act="volume" type="range" min="0" max="1" step=".01" value="'+S.volume+'"><div class="stw-player-footer"><span data-role="scope">全局</span><button class="stw-manage" data-act="manage">管理音乐 / 美化</button></div></div></div><button id="stw-launcher" aria-label="音乐">♫</button>';
+  document.body.appendChild(root);player=root.querySelector('#stw-player');
+  audio=new Audio();audio.preload='metadata';audio.volume=S.volume;
+  audio.addEventListener('timeupdate',progress);audio.addEventListener('loadedmetadata',progress);audio.addEventListener('ended',next);
+  root.querySelector('#stw-launcher').onclick=()=>player.classList.toggle('open');
+  root.onclick=e=>{const a=e.target.closest('[data-act]')?.dataset.act;if(a==='play')toggle();if(a==='prev')prev();if(a==='next')next();if(a==='manage')openSettings()};
+  root.querySelector('[data-act="seek"]').oninput=e=>{if(audio.duration)audio.currentTime=audio.duration*Number(e.target.value)/100};
+  root.querySelector('[data-act="volume"]').oninput=e=>{S.volume=Number(e.target.value);audio.volume=S.volume;save()};
+  applyTheme();refresh();
+}
+function load(i,auto){
+  const p=playlist();if(!p.length){refresh();return}
+  songIndex=(i+p.length)%p.length;audio.src=p[songIndex].url;audio.load();refresh();
+  if(auto)audio.play().catch(()=>{});
+}
+function toggle(){if(!playlist().length)return;if(!audio.src)load(0,true);else if(audio.paused)audio.play().catch(()=>{});else audio.pause();refresh()}
+function next(){const p=playlist();if(p.length)load(songIndex+1,true)}
+function prev(){const p=playlist();if(!p.length)return;if(audio.currentTime>3){audio.currentTime=0;return}load(songIndex-1,true)}
+function progress(){if(!root)return;const p=root.querySelector('[data-act="seek"]');if(audio.duration)p.value=audio.currentTime/audio.duration*100;root.querySelector('[data-time="cur"]').textContent=time(audio.currentTime);root.querySelector('[data-time="dur"]').textContent=time(audio.duration);root.querySelector('[data-act="play"]').textContent=audio.paused?'▶':'Ⅱ'}
+function refresh(){
+  if(!root)return;const p=playlist(),s=p[songIndex];
+  root.querySelector('.stw-now-title').textContent=s?.title||'暂无歌曲';
+  root.querySelector('.stw-now-sub').textContent=charName()||'全局歌单';
+  root.querySelector('[data-role="scope"]').textContent=charName()&&S.autoCharacter?'角色歌单':'全局';
+  const cover=root.querySelector('.stw-cover');cover.src=s?.cover||'';cover.style.visibility=s?.cover?'visible':'hidden';
+  progress();applyTheme();root.style.display=S.enabled?'':'none';
+}
+function setScope(k){if(k==='global')return S.music.global.playlist;return scopeList(k)}
+function download(data,name){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function fileInput(cb){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=()=>{const f=i.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{cb(JSON.parse(r.result))}catch{}};r.readAsText(f)};i.click()}
+async function loadSettingsPanel(){
+  if(settingsLoaded)return;
+  const c=ctx();let html='';
+  try{html=await c.renderExtensionTemplateAsync?.('third-party/-','settings',{})}catch{}
+  if(!html)try{html=await $.get('scripts/extensions/third-party/-/settings.html')}catch{}
+  if(!html)return;
+  $('#extensions_settings2').append(html);settingsLoaded=true;bindSettings();refreshSettings();
+}
+function refreshSettings(){
+  const q=x=>document.querySelector(x);if(!q('#stw-scope'))return;
+  q('#stw-enabled').checked=S.enabled;q('#stw-auto-character').checked=S.autoCharacter;q('#stw-fallback-global').checked=S.fallbackGlobal;q('#stw-autoplay').checked=S.autoplay;q('#stw-volume').value=S.volume;
+  const sel=q('#stw-scope'),old=sel.value;sel.innerHTML='<option value="global">全局歌单</option>';
+  chars().forEach(x=>{const o=document.createElement('option');o.value=x.key;o.textContent='角色：'+x.name;sel.appendChild(o)});
+  if([...sel.options].some(x=>x.value===old))sel.value=old;
+  const list=setScope(sel.value),box=q('#stw-playlist');box.innerHTML=list.length?'':'<div class="stw-help">这里还没有歌曲。</div>';
+  list.forEach((s,i)=>{const r=document.createElement('div');r.className='stw-song';r.innerHTML='<span class="stw-song-title"></span><span class="stw-song-url"></span><button class="stw-btn">播放</button><button class="stw-btn">删除</button>';r.children[0].textContent=s.title;r.children[1].textContent=s.url;r.children[2].onclick=()=>{songIndex=i;audio.src=s.url;audio.play().catch(()=>{});refresh()};r.children[3].onclick=()=>{list.splice(i,1);save();refreshSettings();refresh()};box.appendChild(r)});
+  const ts=q('#stw-theme-select');ts.innerHTML='';Object.values(S.themes).forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.name;ts.appendChild(o)});ts.value=S.currentTheme;
+  const t=S.themes[S.currentTheme]||DEFAULT_THEME;q('#stw-theme-name').value=t.name||'';q('#stw-theme-author').value=t.author||'';q('#stw-theme-version').value=t.version||'1.0.0';q('#stw-theme-launcher').value=t.variables?.launcherImage||'';q('#stw-theme-bg').value=t.variables?.backgroundImage||'';q('#stw-theme-accent').value=t.variables?.accent||'#9acbff';q('#stw-theme-css').value=t.css||'';
+}
+function bindSettings(){
+  const q=x=>document.querySelector(x);
+  document.querySelectorAll('.stw-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.stw-tab').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.stw-tab-panel').forEach(x=>x.classList.toggle('active',x.dataset.panel===b.dataset.tab))});
+  q('#stw-enabled').onchange=e=>{S.enabled=e.target.checked;save();refresh()};q('#stw-auto-character').onchange=e=>{S.autoCharacter=e.target.checked;save();refresh()};q('#stw-fallback-global').onchange=e=>{S.fallbackGlobal=e.target.checked;save();refresh()};q('#stw-autoplay').onchange=e=>{S.autoplay=e.target.checked;save()};q('#stw-volume').oninput=e=>{S.volume=Number(e.target.value);audio.volume=S.volume;save()};
+  q('#stw-scope').onchange=refreshSettings;
+  q('#stw-use-current').onclick=()=>{const k=charKey();if(!k)return;const s=q('#stw-scope');s.value=k;scopeList(k);refreshSettings()};
+  q('#stw-add-song').onclick=()=>{const title=q('#stw-song-title').value.trim(),url=q('#stw-song-url').value.trim(),cover=q('#stw-song-cover').value.trim();if(!title||!url)return;setScope(q('#stw-scope').value).push({id:id(),title,url,cover});q('#stw-song-title').value='';q('#stw-song-url').value='';q('#stw-song-cover').value='';save();refreshSettings();refresh()};
+  q('#stw-theme-select').onchange=e=>{S.currentTheme=e.target.value;save();refreshSettings();applyTheme()};
+  q('#stw-theme-new').onclick=()=>{const i='theme-'+id();S.themes[i]={...clone(DEFAULT_THEME),id:i,name:'我的主题',author:'',css:''};S.currentTheme=i;save();refreshSettings();applyTheme()};
+  q('#stw-theme-duplicate').onclick=()=>{const t=clone(S.themes[S.currentTheme]||DEFAULT_THEME),i='theme-'+id();t.id=i;t.name=t.name+' 副本';S.themes[i]=t;S.currentTheme=i;save();refreshSettings();applyTheme()};
+  q('#stw-theme-save').onclick=()=>{const t=S.themes[S.currentTheme]||clone(DEFAULT_THEME);t.name=q('#stw-theme-name').value.trim()||'未命名主题';t.author=q('#stw-theme-author').value.trim();t.version=q('#stw-theme-version').value.trim()||'1.0.0';t.variables={...(t.variables||{}),launcherImage:q('#stw-theme-launcher').value.trim(),backgroundImage:q('#stw-theme-bg').value.trim(),accent:q('#stw-theme-accent').value.trim()||'#9acbff'};t.css=q('#stw-theme-css').value;S.themes[t.id]=t;save();applyTheme();refreshSettings()};
+  q('#stw-theme-delete').onclick=()=>{if(S.currentTheme==='default')return;delete S.themes[S.currentTheme];S.currentTheme='default';save();refreshSettings();applyTheme()};
+  q('#stw-theme-import').onclick=()=>q('#stw-theme-file').click();q('#stw-theme-file').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const t=JSON.parse(r.result);if(t?.schemaVersion===1&&t?.name&&typeof t.css==='string'){t.id=String(t.id||('theme-'+id())).replace(/[^a-zA-Z0-9_-]/g,'-');S.themes[t.id]=t;S.currentTheme=t.id;save();refreshSettings();applyTheme()}}catch{}};r.readAsText(f)};
+  q('#stw-theme-export').onclick=()=>download(S.themes[S.currentTheme],'music-widget-theme-'+S.currentTheme+'.json');
+  q('#stw-data-export').onclick=()=>download(S.music,'music-widget-data.json');q('#stw-data-import').onclick=()=>q('#stw-data-file').click();q('#stw-data-file').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d?.global&&d?.characters){S.music=d;save();refreshSettings();refresh()}}catch{}};r.readAsText(f)};
+}
+function openSettings(){const b=document.querySelector('#extensionsMenuButton');if(b)b.click();setTimeout(()=>document.querySelector('.stw-settings')?.scrollIntoView({behavior:'smooth',block:'start'}),250)}
+function bindEvents(){
+  const c=ctx(),es=c.eventSource,et=c.event_types||{};
+  if(es&&et.CHAT_CHANGED)es.on(et.CHAT_CHANGED,()=>{songIndex=0;audio.pause();if(S.autoplay&&playlist().length)load(0,true);else refresh();refreshSettings()});
+  let last=charKey();setInterval(()=>{const k=charKey();if(k!==last){last=k;songIndex=0;audio.pause();if(S.autoCharacter&&S.autoplay&&playlist().length)load(0,true);else refresh();refreshSettings()}},1000);
+}
+export async function init(){ensure();build();await loadSettingsPanel();bindEvents();refresh();console.info('[酒馆音乐小组件] v0.1.0 已加载')}
