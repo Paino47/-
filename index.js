@@ -45,7 +45,12 @@ function charName(){
 }
 function chars(){
   const c=ctx(), list=c.characters||window.characters||[];
-  return list.map((x,i)=>({key:String(x.avatar||x.name||i),name:x.name||x.data?.name||('角色 '+(i+1))}));
+  return list.map((x,i)=>({key:String(x.avatar||x.name||i),name:x.name||x.data?.name||('角色 '+(i+1)),avatar:x.avatar||'',index:i}));
+}
+function ensureChar(k,name){
+  S.music.characters[k] ||= {name:name||k,playlist:[],bound:false,visible:true,enabled:true,skinUrl:''};
+  const x=S.music.characters[k];x.name=name||x.name||k;x.playlist ||= [];x.bound=!!x.bound;x.visible=x.visible!==false;x.enabled=x.enabled!==false;x.skinUrl=typeof x.skinUrl==='string'?x.skinUrl:'';
+  return x;
 }
 function playlist(){
   const k=charKey();
@@ -103,31 +108,49 @@ function refresh(){
   root.querySelector('.stw-now-sub').textContent=charName()||'全局歌单';
   root.querySelector('[data-role="scope"]').textContent=charName()&&S.autoCharacter?'角色歌单':'全局';
   const cover=root.querySelector('.stw-cover');cover.src=s?.cover||'';cover.style.visibility=s?.cover?'visible':'hidden';
-  progress();applyTheme();root.style.display=S.enabled?'':'none';
+  progress();applyTheme();applySkin();root.style.display=isPlayerVisible()?'':'none';
 }
 function setScope(k){if(k==='global')return S.music.global.playlist;return scopeList(k)}
 function download(data,name){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function downloadText(textValue,name,type='text/plain'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([textValue],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function fileInput(cb){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=()=>{const f=i.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{cb(JSON.parse(r.result))}catch{}};r.readAsText(f)};i.click()}
 async function loadSettingsPanel(){
   if(settingsLoaded)return;
   const c=ctx();let html='';
   try{html=await c.renderExtensionTemplateAsync?.('third-party/-','settings',{})}catch{}
-  if(!html)try{html=await $.get('scripts/extensions/third-party/-/settings.html')}catch{}
+  if(!html){try{html=await $.get(new URL('./settings.html',import.meta.url).href)}catch{}}
   if(!html)return;
   const host=$('#extensions_settings2').length?$('#extensions_settings2'):$('#extensions_settings');
   if(!host.length)return;
   host.append(html);settingsLoaded=true;bindSettings();refreshSettings();
 }
+function renderCharacterBindings(){
+  const box=document.querySelector('#stw-character-list');if(!box)return;
+  const list=chars();if(!list.length){box.innerHTML='<div class="stw-help">当前没有读取到角色列表。请先选择/加载角色后再打开这里。</div>';return}
+  box.innerHTML='';
+  list.forEach(x=>{
+    const cs=ensureChar(x.key,x.name),row=document.createElement('div');row.className='stw-character-row';
+    row.innerHTML='<div class="stw-character-main"><div class="stw-character-name"></div><div class="stw-character-meta"></div></div><label class="stw-character-bind"><input type="checkbox"> 绑定</label><button class="stw-btn stw-character-edit">编辑音乐</button>';
+    row.querySelector('.stw-character-name').textContent=x.name;
+    row.querySelector('.stw-character-meta').textContent=cs.playlist.length?('已保存 '+cs.playlist.length+' 首歌曲'):'暂无角色歌单';
+    row.querySelector('input').checked=cs.bound;
+    row.querySelector('input').onchange=e=>{cs.bound=e.target.checked;save();refresh();refreshSettings()};
+    row.querySelector('.stw-character-edit').onclick=()=>{const sel=document.querySelector('#stw-scope');if(sel){sel.value=x.key;refreshSettings();sel.scrollIntoView({behavior:'smooth',block:'center'})}};
+    box.appendChild(row);
+  });
+}
 function refreshSettings(){
   const q=x=>document.querySelector(x);if(!q('#stw-scope'))return;
   q('#stw-enabled').checked=S.enabled;q('#stw-auto-character').checked=S.autoCharacter;q('#stw-fallback-global').checked=S.fallbackGlobal;q('#stw-autoplay').checked=S.autoplay;q('#stw-volume').value=S.volume;
   if(q('#stw-bound-only'))q('#stw-bound-only').checked=S.scope==='bound';if(q('#stw-global-visible'))q('#stw-global-visible').checked=S.globalVisible;if(q('#stw-global-skin'))q('#stw-global-skin').value=S.globalSkinUrl||'';
-  const ck=charKey(),cs=ck?(S.music.characters[ck]||{}):{};if(q('#stw-current-character'))q('#stw-current-character').textContent=charName()||'当前没有选择角色';if(q('#stw-bind'))q('#stw-bind').checked=!!cs.bound;if(q('#stw-char-visible'))q('#stw-char-visible').checked=cs.visible!==false;if(q('#stw-char-enabled'))q('#stw-char-enabled').checked=cs.enabled!==false;if(q('#stw-char-skin'))q('#stw-char-skin').value=cs.skinUrl||'';
+  const ck=charKey(),cs=ck?ensureChar(ck,charName()):{};
+  if(q('#stw-current-character'))q('#stw-current-character').textContent=charName()||'当前没有选择角色';if(q('#stw-bind'))q('#stw-bind').checked=!!cs.bound;if(q('#stw-char-visible'))q('#stw-char-visible').checked=cs.visible!==false;if(q('#stw-char-enabled'))q('#stw-char-enabled').checked=cs.enabled!==false;if(q('#stw-char-skin'))q('#stw-char-skin').value=cs.skinUrl||'';
+  renderCharacterBindings();
   const sel=q('#stw-scope'),old=sel.value;sel.innerHTML='<option value="global">全局歌单</option>';
   chars().forEach(x=>{const o=document.createElement('option');o.value=x.key;o.textContent='角色：'+x.name;sel.appendChild(o)});
   if([...sel.options].some(x=>x.value===old))sel.value=old;
   const list=setScope(sel.value),box=q('#stw-playlist');box.innerHTML=list.length?'':'<div class="stw-help">这里还没有歌曲。</div>';
-  list.forEach((s,i)=>{const r=document.createElement('div');r.className='stw-song';r.innerHTML='<span class="stw-song-title"></span><span class="stw-song-url"></span><button class="stw-btn">播放</button><button class="stw-btn">删除</button>';r.children[0].textContent=s.title;r.children[1].textContent=s.url;r.children[2].onclick=()=>{songIndex=i;audio.src=s.url;audio.play().catch(()=>{});refresh()};r.children[3].onclick=()=>{list.splice(i,1);save();refreshSettings();refresh()};box.appendChild(r)});
+  list.forEach((song,i)=>{const r=document.createElement('div');r.className='stw-song';r.innerHTML='<span class="stw-song-title"></span><span class="stw-song-url"></span><button class="stw-btn">播放</button><button class="stw-btn">删除</button>';r.children[0].textContent=song.title;r.children[1].textContent=song.url;r.children[2].onclick=()=>{songIndex=i;audio.src=song.url;audio.play().catch(()=>{});refresh()};r.children[3].onclick=()=>{list.splice(i,1);save();refreshSettings();refresh()};box.appendChild(r)});
   const ts=q('#stw-theme-select');ts.innerHTML='';Object.values(S.themes).forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.name;ts.appendChild(o)});ts.value=S.currentTheme;
   const t=S.themes[S.currentTheme]||DEFAULT_THEME;q('#stw-theme-name').value=t.name||'';q('#stw-theme-author').value=t.author||'';q('#stw-theme-version').value=t.version||'1.0.0';q('#stw-theme-launcher').value=t.variables?.launcherImage||'';q('#stw-theme-bg').value=t.variables?.backgroundImage||'';q('#stw-theme-accent').value=t.variables?.accent||'#9acbff';q('#stw-theme-css').value=t.css||'';
 }
@@ -147,9 +170,12 @@ function bindSettings(){
   q('#stw-theme-delete').onclick=()=>{if(S.currentTheme==='default')return;delete S.themes[S.currentTheme];S.currentTheme='default';save();refreshSettings();applyTheme()};
   q('#stw-theme-import').onclick=()=>q('#stw-theme-file').click();q('#stw-theme-file').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const t=JSON.parse(r.result);if(t?.schemaVersion===1&&t?.name&&typeof t.css==='string'){t.id=String(t.id||('theme-'+id())).replace(/[^a-zA-Z0-9_-]/g,'-');S.themes[t.id]=t;S.currentTheme=t.id;save();refreshSettings();applyTheme()}}catch{}};r.readAsText(f)};
   q('#stw-theme-export').onclick=()=>download(S.themes[S.currentTheme],'music-widget-theme-'+S.currentTheme+'.json');
+  q('#stw-css-import').onclick=()=>q('#stw-css-file').click();
+  q('#stw-css-file').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{const t=S.themes[S.currentTheme]||clone(DEFAULT_THEME);t.css=String(r.result||'');S.themes[t.id]=t;save();applyTheme();refreshSettings()};r.readAsText(f)};
+  q('#stw-css-export').onclick=()=>{const t=S.themes[S.currentTheme]||DEFAULT_THEME;downloadText(t.css||'',(t.name||'music-widget-theme').replace(/[\\/:*?"<>|]/g,'_')+'.css','text/css')};
   q('#stw-data-export').onclick=()=>download(S.music,'music-widget-data.json');q('#stw-data-import').onclick=()=>q('#stw-data-file').click();q('#stw-data-file').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d?.global&&d?.characters){S.music=d;save();refreshSettings();refresh()}}catch{}};r.readAsText(f)};
 }
-function openSettings(){const b=document.querySelector('#extensionsMenuButton');if(b)b.click();setTimeout(()=>document.querySelector('.stw-settings')?.scrollIntoView({behavior:'smooth',block:'start'}),250)}
+function openSettings(){const b=document.querySelector('#extensionsMenuButton');if(b)b.click();setTimeout(()=>document.querySelector('.stw-extension-drawer')?.scrollIntoView({behavior:'smooth',block:'start'}),250)}
 function bindEvents(){
   const c=ctx(),es=c.eventSource,et=c.event_types||{};
   if(es&&et.CHAT_CHANGED)es.on(et.CHAT_CHANGED,()=>{songIndex=0;audio.pause();if(S.autoplay&&playlist().length)load(0,true);else refresh();refreshSettings()});
@@ -163,7 +189,7 @@ export async function init(){
   await loadSettingsPanel();
   bindEvents();
   refresh();
-  console.info('[角色音乐播放器] v0.1.1 已加载');
+  console.info('[角色音乐播放器] v0.2.0 已加载');
 }
 
 // 兼容没有执行 manifest hooks.activate 的酒馆版本，同时用 initialized 防止重复初始化。
