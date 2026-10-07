@@ -7,6 +7,7 @@ const DEFAULT_THEME = {
 };
 const DEFAULTS = {
   enabled:true, autoCharacter:true, fallbackGlobal:true, autoplay:false, volume:.7,
+  scope:'global', globalVisible:true, globalSkinUrl:'',
   currentTheme:'default', music:{global:{playlist:[]},characters:{}}, themes:{default:DEFAULT_THEME}
 };
 let S, audio, root, player, songIndex=0, settingsLoaded=false, initialized=false;
@@ -45,10 +46,13 @@ function playlist(){
 }
 function scopeList(k){
   if(k==='global')return S.music.global.playlist;
-  S.music.characters[k] ||= {name:k,playlist:[]};
-  S.music.characters[k].playlist ||= [];
-  return S.music.characters[k].playlist;
+  S.music.characters[k] ||= {name:k,playlist:[],bound:false,visible:true,enabled:true,skinUrl:''};
+  const x=S.music.characters[k];x.playlist ||= [];x.bound=!!x.bound;x.visible=x.visible!==false;x.enabled=x.enabled!==false;x.skinUrl=x.skinUrl||'';
+  return x.playlist;
 }
+function isPlayerVisible(){const k=charKey(),cs=k?S.music.characters[k]:null;if(!S.enabled||!S.globalVisible)return false;if(S.scope==='bound')return !!cs?.bound&&cs?.enabled!==false&&cs?.visible!==false;return cs?.enabled!==false&&cs?.visible!==false;}
+function bundledSkinUrl(){try{return new URL('./skins/lizhang.css',import.meta.url).href}catch{return '/scripts/extensions/third-party/-/skins/lizhang.css'}}
+function applySkin(){const k=charKey(),cs=k?S.music.characters[k]:null,url=(cs?.bound&&cs.skinUrl)||S.globalSkinUrl||bundledSkinUrl();let l=document.getElementById('element47-role-music-skin');if(!l){l=document.createElement('link');l.id='element47-role-music-skin';l.rel='stylesheet';document.head.appendChild(l)}if(l.href!==url)l.href=url;}
 function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function time(v){if(!Number.isFinite(v))return'0:00';return Math.floor(v/60)+':'+String(Math.floor(v%60)).padStart(2,'0')}
 
@@ -71,7 +75,7 @@ function build(){
   root.onclick=e=>{const a=e.target.closest('[data-act]')?.dataset.act;if(a==='play')toggle();if(a==='prev')prev();if(a==='next')next();if(a==='manage')openSettings()};
   root.querySelector('[data-act="seek"]').oninput=e=>{if(audio.duration)audio.currentTime=audio.duration*Number(e.target.value)/100};
   root.querySelector('[data-act="volume"]').oninput=e=>{S.volume=Number(e.target.value);audio.volume=S.volume;save()};
-  applyTheme();refresh();
+  applyTheme();applySkin();refresh();
 }
 function load(i,auto){
   const p=playlist();if(!p.length){refresh();return}
@@ -104,6 +108,8 @@ async function loadSettingsPanel(){
 function refreshSettings(){
   const q=x=>document.querySelector(x);if(!q('#stw-scope'))return;
   q('#stw-enabled').checked=S.enabled;q('#stw-auto-character').checked=S.autoCharacter;q('#stw-fallback-global').checked=S.fallbackGlobal;q('#stw-autoplay').checked=S.autoplay;q('#stw-volume').value=S.volume;
+  if(q('#stw-bound-only'))q('#stw-bound-only').checked=S.scope==='bound';if(q('#stw-global-visible'))q('#stw-global-visible').checked=S.globalVisible;if(q('#stw-global-skin'))q('#stw-global-skin').value=S.globalSkinUrl||'';
+  const ck=charKey(),cs=ck?(S.music.characters[ck]||{}):{};if(q('#stw-current-character'))q('#stw-current-character').textContent=charName()||'当前没有选择角色';if(q('#stw-bind'))q('#stw-bind').checked=!!cs.bound;if(q('#stw-char-visible'))q('#stw-char-visible').checked=cs.visible!==false;if(q('#stw-char-enabled'))q('#stw-char-enabled').checked=cs.enabled!==false;if(q('#stw-char-skin'))q('#stw-char-skin').value=cs.skinUrl||'';
   const sel=q('#stw-scope'),old=sel.value;sel.innerHTML='<option value="global">全局歌单</option>';
   chars().forEach(x=>{const o=document.createElement('option');o.value=x.key;o.textContent='角色：'+x.name;sel.appendChild(o)});
   if([...sel.options].some(x=>x.value===old))sel.value=old;
@@ -117,6 +123,8 @@ function bindSettings(){
   document.querySelectorAll('.stw-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.stw-tab').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.stw-tab-panel').forEach(x=>x.classList.toggle('active',x.dataset.panel===b.dataset.tab))});
   q('#stw-enabled').onchange=e=>{S.enabled=e.target.checked;save();refresh()};q('#stw-auto-character').onchange=e=>{S.autoCharacter=e.target.checked;save();refresh()};q('#stw-fallback-global').onchange=e=>{S.fallbackGlobal=e.target.checked;save();refresh()};q('#stw-autoplay').onchange=e=>{S.autoplay=e.target.checked;save()};q('#stw-volume').oninput=e=>{S.volume=Number(e.target.value);audio.volume=S.volume;save()};
   q('#stw-scope').onchange=refreshSettings;
+  if(q('#stw-bound-only'))q('#stw-bound-only').onchange=e=>{S.scope=e.target.checked?'bound':'global';save();refresh()};if(q('#stw-global-visible'))q('#stw-global-visible').onchange=e=>{S.globalVisible=e.target.checked;save();refresh()};if(q('#stw-global-skin'))q('#stw-global-skin').onchange=e=>{S.globalSkinUrl=e.target.value.trim();save();refresh()};
+  if(q('#stw-bind'))q('#stw-bind').onchange=e=>{const k=charKey();if(!k)return;(S.music.characters[k]||={name:charName(),playlist:[],bound:false,visible:true,enabled:true,skinUrl:''}).bound=e.target.checked;save();refreshSettings();refresh()};if(q('#stw-char-visible'))q('#stw-char-visible').onchange=e=>{const k=charKey();if(!k)return;(S.music.characters[k]||={name:charName(),playlist:[],bound:false,visible:true,enabled:true,skinUrl:''}).visible=e.target.checked;save();refresh()};if(q('#stw-char-enabled'))q('#stw-char-enabled').onchange=e=>{const k=charKey();if(!k)return;(S.music.characters[k]||={name:charName(),playlist:[],bound:false,visible:true,enabled:true,skinUrl:''}).enabled=e.target.checked;save();refresh()};if(q('#stw-char-skin'))q('#stw-char-skin').onchange=e=>{const k=charKey();if(!k)return;(S.music.characters[k]||={name:charName(),playlist:[],bound:false,visible:true,enabled:true,skinUrl:''}).skinUrl=e.target.value.trim();save();refresh()};
   q('#stw-use-current').onclick=()=>{const k=charKey();if(!k)return;const s=q('#stw-scope');s.value=k;scopeList(k);refreshSettings()};
   q('#stw-add-song').onclick=()=>{const title=q('#stw-song-title').value.trim(),url=q('#stw-song-url').value.trim(),cover=q('#stw-song-cover').value.trim();if(!title||!url)return;setScope(q('#stw-scope').value).push({id:id(),title,url,cover});q('#stw-song-title').value='';q('#stw-song-url').value='';q('#stw-song-cover').value='';save();refreshSettings();refresh()};
   q('#stw-theme-select').onchange=e=>{S.currentTheme=e.target.value;save();refreshSettings();applyTheme()};
