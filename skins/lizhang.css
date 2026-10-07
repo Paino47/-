@@ -1,0 +1,18 @@
+/* 元素四十七｜角色音乐播放器｜黎奖·逍遥留白
+   独立皮肤：可单独替换，不参与播放器核心逻辑。
+*/
+#stw-root #stw-launcher{border:1px solid rgba(216,200,168,.45);background:rgba(24,25,25,.78);color:#d8c8a8;box-shadow:0 6px 24px rgba(0,0,0,.22);font-family:"LXGW WenKai Screen","Noto Serif SC",serif}
+#stw-root #stw-player{border:1px solid rgba(216,200,168,.34);border-radius:8px;padding:22px 24px 16px;box-sizing:border-box;color:#e7dfd1;background:linear-gradient(180deg,rgba(22,22,22,.94),rgba(17,17,17,.91));box-shadow:0 18px 45px rgba(0,0,0,.32);backdrop-filter:blur(14px);font-family:"LXGW WenKai Screen","Noto Serif SC",serif}
+#stw-root .stw-player-inner{padding:0}
+#stw-root .stw-now{display:block;text-align:center}
+#stw-root .stw-now-main{width:100%}
+#stw-root .stw-now-title{font-size:14px;letter-spacing:.08em;color:#f0e8dc}
+#stw-root .stw-now-sub{color:#b9ae9e;letter-spacing:.04em}
+#stw-root .stw-cover{display:none}
+#stw-root .stw-controls{margin:14px 0 8px}
+#stw-root .stw-control{background:transparent;color:#d8c8a8}
+#stw-root .stw-control.play{background:rgba(216,200,168,.1);color:#d8c8a8;border:1px solid rgba(216,200,168,.45)}
+#stw-root .stw-progress{accent-color:#cdbb9d}
+#stw-root .stw-player-footer{color:#a99f91}
+#stw-root .stw-manage{color:#cdbb9d}
+@media(max-width:600px){#stw-root #stw-player{padding:18px 18px 14px}}
