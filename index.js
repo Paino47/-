@@ -20,7 +20,18 @@ function ensure(){
   S.music ||= clone(DEFAULTS.music); S.music.global ||= {playlist:[]}; S.music.characters ||= {};
   S.themes ||= {default:clone(DEFAULT_THEME)}; S.themes.default ||= clone(DEFAULT_THEME);
   if(!S.themes[S.currentTheme])S.currentTheme='default';
-  S.enabled=S.enabled!==false; S.volume=Number.isFinite(S.volume)?S.volume:.7;
+  S.enabled=S.enabled!==false;
+  S.globalVisible=S.globalVisible!==false;
+  S.globalSkinUrl=typeof S.globalSkinUrl==='string'?S.globalSkinUrl:'';
+  S.scope=S.scope==='bound'?'bound':'global';
+  S.volume=Number.isFinite(Number(S.volume))?Number(S.volume):.7;
+  Object.values(S.music.characters).forEach(x=>{
+    x.playlist ||= [];
+    x.bound=!!x.bound;
+    x.visible=x.visible!==false;
+    x.enabled=x.enabled!==false;
+    x.skinUrl=typeof x.skinUrl==='string'?x.skinUrl:'';
+  });
   if(c.extensionSettings)c.extensionSettings[MODULE]=S;
 }
 function save(){try{ctx().saveSettingsDebounced?.()}catch{}}
@@ -103,7 +114,9 @@ async function loadSettingsPanel(){
   try{html=await c.renderExtensionTemplateAsync?.('third-party/-','settings',{})}catch{}
   if(!html)try{html=await $.get('scripts/extensions/third-party/-/settings.html')}catch{}
   if(!html)return;
-  $('#extensions_settings2').append(html);settingsLoaded=true;bindSettings();refreshSettings();
+  const host=$('#extensions_settings2').length?$('#extensions_settings2'):$('#extensions_settings');
+  if(!host.length)return;
+  host.append(html);settingsLoaded=true;bindSettings();refreshSettings();
 }
 function refreshSettings(){
   const q=x=>document.querySelector(x);if(!q('#stw-scope'))return;
@@ -150,7 +163,7 @@ export async function init(){
   await loadSettingsPanel();
   bindEvents();
   refresh();
-  console.info('[酒馆音乐小组件] v0.1.2 已加载');
+  console.info('[角色音乐播放器] v0.1.1 已加载');
 }
 
 // 兼容没有执行 manifest hooks.activate 的酒馆版本，同时用 initialized 防止重复初始化。
