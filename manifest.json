@@ -1,14 +1,12 @@
 {
-  "display_name": "酒馆音乐小组件",
-  "loading_order": 20,
+  "display_name": "角色音乐播放器",
+  "loading_order": 1000,
   "requires": [],
   "optional": [],
   "js": "index.js",
   "css": "style.css",
-  "author": "元素四十七 + ChatGPT",
-  "version": "0.1.2",
+  "author": "元素四十七",
+  "version": "0.1.0",
   "homePage": "https://github.com/Paino47/-",
-  "hooks": {
-    "activate": "init"
-  }
+  "auto_update": true
 }
