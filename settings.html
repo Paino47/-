@@ -27,9 +27,11 @@
     <section class="stw-tab-panel active" data-panel="music">
       <div class="stw-card">
         <div class="stw-card-title">角色绑定</div>
-        <div class="stw-character-sort">
-          <label for="stw-character-sort">排序</label>
-          <select id="stw-character-sort">
+        <div class="stw-row stw-character-tools">
+          <input id="stw-character-search" class="stw-character-search" placeholder="搜索角色卡">
+          <div class="stw-character-sort">
+            <label for="stw-character-sort">排序</label>
+            <select id="stw-character-sort">
             <option value="name-asc">A-Z</option>
             <option value="name-desc">Z-A</option>
             <option value="newest">最新</option>
@@ -42,6 +44,7 @@
             <option value="least-tokens">最少 Tokens</option>
             <option value="random">随机</option>
           </select>
+        </div>
         </div>
         <div class="stw-help">排序方式参照酒馆角色卡列表的字段：创建时间、最近聊天、聊天数量、Tokens 等。</div>
         <div id="stw-character-list" class="stw-character-list"></div>
