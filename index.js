@@ -964,3 +964,15 @@ function bindEvents() {
     refreshSettings();
   }, 700);
 }
+
+
+// 兼容 SillyTavern 1.15.0：该版本不会自动调用 manifest hooks，需由扩展入口自行启动。
+function bootExtension() {
+  init().catch((error) => console.error('[角色音乐播放器] 初始化失败', error));
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootExtension, { once: true });
+} else {
+  bootExtension();
+}
