@@ -20,7 +20,7 @@ SillyTavern 第三方扩展：全局音乐 + 角色绑定音乐 + 独立可替�
 
 在 SillyTavern → 扩展 → 安装扩展程序中输入：
 
-https://github.com/Paino47/-
+https://github.com/Paino47/sillytavern-role-music-player
 
 安装后刷新酒馆。
 
