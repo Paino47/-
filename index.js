@@ -502,15 +502,7 @@ async function loadExtensionStyle() {
 async function loadSettingsPanel() {
   if (settingsLoaded) return;
   let html = '';
-  const c = ctx();
-
-  try {
-    html = await c.renderExtensionTemplateAsync?.('', '', {});
-  } catch {}
-
-  if (!html) {
-    try { html = await $.get(new URL('./settings.html', import.meta.url).href); } catch {}
-  }
+  try { html = await $.get(new URL('./settings.html', import.meta.url).href); } catch {}
 
   if (!html) {
     console.error('[角色音乐播放器] settings.html 加载失败');
