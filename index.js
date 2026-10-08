@@ -946,16 +946,6 @@ function bindSettings() {
   });
 }
 
-function switchEditorToCharacter() {
-  // The character tab owns the character list and editor.
-  const tab = document.querySelector('.stw-tab[data-tab="character"]');
-  if (tab) {
-    tab.click();
-  } else {
-    renderCharacterBindings();
-    renderMusicEditor();
-  }
-}
 function openSettings() {
   const button = document.querySelector('#extensionsMenuButton');
   if (button) button.click();
