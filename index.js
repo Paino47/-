@@ -43,6 +43,9 @@ let initialized = false;
 let songIndex = 0;
 let characterPollTimer = null;
 let lastCharacterKey = null;
+let coreCharacters = [];
+let coreCharacterId = -1;
+const VERSION = '0.3.2';
 
 const ctx = () => {
   try { return SillyTavern.getContext(); } catch { return {}; }
@@ -91,16 +94,38 @@ function save() {
   try { ctx().saveSettingsDebounced?.(); } catch {}
 }
 
+async function syncCoreContext() {
+  const c = ctx();
+
+  if (Array.isArray(c.characters)) coreCharacters = c.characters;
+  else if (Array.isArray(window.characters)) coreCharacters = window.characters;
+
+  if (Number.isInteger(c.characterId)) coreCharacterId = c.characterId;
+  else if (Number.isInteger(c.this_chid)) coreCharacterId = c.this_chid;
+  else if (Number.isInteger(window.this_chid)) coreCharacterId = window.this_chid;
+
+  if (!coreCharacters.length || coreCharacterId < 0) {
+    try {
+      const mod = await import('/script.js');
+      if (!coreCharacters.length && Array.isArray(mod.characters)) coreCharacters = mod.characters;
+      if (coreCharacterId < 0 && Number.isInteger(mod.this_chid)) coreCharacterId = mod.this_chid;
+    } catch {}
+  }
+}
+
 function getCharacterList() {
   const c = ctx();
-  return c.characters || window.characters || [];
+  if (Array.isArray(c.characters)) return c.characters;
+  if (Array.isArray(window.characters)) return window.characters;
+  return coreCharacters;
 }
 
 function getCurrentCharacterIndex() {
   const c = ctx();
+  if (Number.isInteger(c.characterId)) return c.characterId;
   if (Number.isInteger(c.this_chid)) return c.this_chid;
   if (Number.isInteger(window.this_chid)) return window.this_chid;
-  return -1;
+  return coreCharacterId;
 }
 
 function charKey() {
@@ -447,6 +472,21 @@ function download(data, filename, mime = 'application/json') {
   a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function loadExtensionStyle() {
+  if (document.getElementById('stw-extension-inline-style')) return;
+  try {
+    const url = new URL('./style.css?v=' + VERSION, import.meta.url).href;
+    const css = await fetch(url, { cache: 'no-store' }).then((response) => response.ok ? response.text() : '');
+    if (!css) return;
+    const style = document.createElement('style');
+    style.id = 'stw-extension-inline-style';
+    style.textContent = css;
+    document.head.appendChild(style);
+  } catch (error) {
+    console.warn('[角色音乐播放器] 样式注入失败', error);
+  }
 }
 
 async function loadSettingsPanel() {
@@ -962,7 +1002,8 @@ function bindEvents() {
   const et = c.event_types || {};
 
   if (es && et.CHAT_CHANGED) {
-    es.on(et.CHAT_CHANGED, () => {
+    es.on(et.CHAT_CHANGED, async () => {
+      await syncCoreContext();
       songIndex = 0;
       audio.pause();
       if (S.autoplay && playlist().length) load(0, true);
@@ -974,7 +1015,8 @@ function bindEvents() {
   lastCharacterKey = charKey();
   clearInterval(characterPollTimer);
 
-  characterPollTimer = setInterval(() => {
+  characterPollTimer = setInterval(async () => {
+    await syncCoreContext();
     const currentKey = charKey();
     if (currentKey === lastCharacterKey) return;
 
@@ -994,6 +1036,8 @@ export async function init() {
   initialized = true;
 
   ensure();
+  await syncCoreContext();
+  await loadExtensionStyle();
   build();
   await loadSettingsPanel();
   bindEvents();
