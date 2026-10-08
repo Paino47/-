@@ -1,30 +1,201 @@
-<div class="stw-settings">
-  <div class="stw-settings-head"><div><div class="stw-title">角色音乐播放器</div><div class="stw-subtitle">角色绑定 / 全局音乐 / 独立可替换皮肤</div></div><label class="stw-switch"><input id="stw-enabled" type="checkbox"><span></span></label></div>
-  <div class="stw-tabs"><button class="stw-tab active" data-tab="music">音乐</button><button class="stw-tab" data-tab="theme">美化</button><button class="stw-tab" data-tab="settings">设置</button></div>
-  <div class="stw-card"><div class="stw-card-title">当前角色</div><div id="stw-current-character" class="stw-help">当前没有选择角色</div><label class="stw-check"><input id="stw-bind" type="checkbox"> 绑定当前角色</label><label class="stw-check"><input id="stw-char-enabled" type="checkbox"> 当前角色启用播放器</label><label class="stw-check"><input id="stw-char-visible" type="checkbox"> 当前角色显示播放器</label><div class="stw-grid"><input id="stw-char-skin" placeholder="当前角色皮肤 CSS URL；留空=全局/默认黎奖皮肤"></div><div class="stw-help">绑定和皮肤设置保存在你自己的酒馆扩展设置里，不会写入角色卡。</div></div><div class="stw-card"><div class="stw-card-title">作用范围与全局皮肤</div><label class="stw-check"><input id="stw-bound-only" type="checkbox"> 只在已绑定角色时显示播放器</label><label class="stw-check"><input id="stw-global-visible" type="checkbox"> 允许全局播放器显示</label><input id="stw-global-skin" placeholder="全局皮肤 CSS URL；留空=内置「黎奖·逍遥留白」" style="box-sizing:border-box;width:100%;border:1px solid rgba(127,157,190,.22);border-radius:9px;background:rgba(0,0,0,.18);color:inherit;padding:9px"><div class="stw-help">优先级：角色皮肤 ＞ 全局皮肤 ＞ 插件内置黎奖皮肤。</div></div><section class="stw-tab-panel active" data-panel="music">
-    <div class="stw-card"><div class="stw-card-title">歌单位置</div><div class="stw-row"><select id="stw-scope"><option value="global">全局歌单</option></select><button id="stw-use-current" class="stw-btn">使用当前角色</button></div><div class="stw-help">全局歌单不会绑定角色；选择角色后，该角色拥有独立歌单。</div></div>
-    <div class="stw-card"><div class="stw-card-title">添加歌曲</div><div class="stw-grid"><input id="stw-song-title" placeholder="歌曲名字"><input id="stw-song-url" placeholder="音频 URL（mp3 / m4a / ogg / wav 等）"><input id="stw-song-cover" placeholder="封面 URL（可留空）"></div><button id="stw-add-song" class="stw-btn stw-primary">添加到当前歌单</button></div>
-    <div class="stw-card"><div class="stw-card-title">当前歌单</div><div id="stw-playlist" class="stw-playlist"></div></div>
-  </section>
-  <section class="stw-tab-panel" data-panel="theme">
-    <div class="stw-card"><div class="stw-card-title">主题管理</div><div class="stw-row"><select id="stw-theme-select"></select><button id="stw-theme-new" class="stw-btn">新建</button><button id="stw-theme-duplicate" class="stw-btn">复制</button></div><div class="stw-row stw-theme-io"><button id="stw-theme-import" class="stw-btn">导入主题 JSON</button><button id="stw-theme-export" class="stw-btn">导出当前主题</button><input id="stw-theme-file" type="file" accept=".json,application/json" hidden></div></div>
-    <div class="stw-card"><div class="stw-card-title">主题信息</div><div class="stw-grid"><input id="stw-theme-name" placeholder="主题名称"><input id="stw-theme-author" placeholder="作者"><input id="stw-theme-version" placeholder="版本号"><input id="stw-theme-launcher" placeholder="悬浮按钮图片 URL（可留空）"><input id="stw-theme-bg" placeholder="播放器背景图片 URL（可留空）"><input id="stw-theme-accent" placeholder="强调色，例如 #9acbff"></div><textarea id="stw-theme-css" class="stw-code" spellcheck="false" placeholder="在这里直接写完整 CSS。主题只影响音乐小组件，不会修改酒馆其他界面。"></textarea><div class="stw-row"><button id="stw-theme-save" class="stw-btn stw-primary">保存并应用</button><button id="stw-theme-delete" class="stw-btn stw-danger">删除当前主题</button></div><div class="stw-help">主题与音乐数据分开保存。导入主题不会覆盖歌单；导出的 JSON 可以直接分享。</div></div>
-  </section>
-  <section class="stw-tab-panel" data-panel="settings">
-    <div class="stw-card"><div class="stw-card-title">播放设置</div><label class="stw-check"><input id="stw-auto-character" type="checkbox"> 切换角色时自动切换到该角色歌单</label><label class="stw-check"><input id="stw-fallback-global" type="checkbox"> 角色没有歌曲时使用全局歌单</label><label class="stw-check"><input id="stw-autoplay" type="checkbox"> 切换歌单后自动播放（浏览器可能限制自动播放）</label><div class="stw-volume-line"><span>默认音量</span><input id="stw-volume" type="range" min="0" max="1" step="0.01"></div></div>
-    <div class="stw-card"><div class="stw-card-title">数据</div><div class="stw-row"><button id="stw-data-export" class="stw-btn">导出音乐数据</button><button id="stw-data-import" class="stw-btn">导入音乐数据</button><input id="stw-data-file" type="file" accept=".json,application/json" hidden></div><div class="stw-help">音乐数据和主题数据完全分开。音乐数据导入也不会改动主题。</div></div>
-  </section>
-</div>
-.stw-extension-drawer{margin:0!important}
-.stw-extension-header{cursor:pointer}
-.stw-extension-header b{font-size:16px}
-.stw-character-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
-.stw-character-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid rgba(127,157,190,.14);border-radius:10px;background:rgba(255,255,255,.025)}
+/* 元素四十七｜角色音乐播放器｜核心样式 */
+#stw-root{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:999999;
+  color:#f2eee7;
+  font-family:"LXGW WenKai Screen","Noto Serif SC","Microsoft YaHei",sans-serif;
+  font-size:14px;
+}
+#stw-root *{box-sizing:border-box}
+#stw-root button,#stw-root input,#stw-root select,#stw-root textarea{font:inherit}
+#stw-launcher{
+  width:52px;
+  height:52px;
+  border:1px solid var(--stw-border,rgba(216,200,168,.5));
+  border-radius:50%;
+  background:var(--stw-launcher-image,none),rgba(17,18,19,.94);
+  background-size:cover;
+  background-position:center;
+  box-shadow:0 8px 28px rgba(0,0,0,.34);
+  color:var(--stw-accent,#d8c8a8);
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  font-size:21px;
+  transition:transform .18s ease,filter .18s ease;
+}
+#stw-launcher:hover{transform:translateY(-2px);filter:brightness(1.08)}
+#stw-player{
+  display:none;
+  width:min(380px,calc(100vw - 24px));
+  margin-bottom:10px;
+  border:1px solid var(--stw-border,rgba(216,200,168,.36));
+  border-radius:18px;
+  overflow:hidden;
+  color:var(--stw-text,#f2eee7);
+  background:var(--stw-bg-image,none),var(--stw-panel,rgba(18,18,18,.97));
+  background-size:cover;
+  background-position:center;
+  box-shadow:0 18px 50px rgba(0,0,0,.44);
+  backdrop-filter:blur(16px);
+}
+#stw-player.open{display:block}
+.stw-player-inner{padding:16px}
+.stw-now{display:flex;gap:12px;align-items:center}
+.stw-cover{width:68px;height:68px;border-radius:13px;object-fit:cover;background:rgba(255,255,255,.08);flex:none}
+.stw-now-main{min-width:0;flex:1}
+.stw-now-title{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.stw-now-sub{margin-top:4px;font-size:12px;color:rgba(255,255,255,.72)}
+.stw-controls{display:flex;justify-content:center;align-items:center;gap:8px;margin:14px 0 9px}
+.stw-control{
+  width:35px;height:35px;border:1px solid rgba(255,255,255,.16);border-radius:50%;
+  background:rgba(255,255,255,.06);color:#f7f4ee;cursor:pointer;
+}
+.stw-control.play{width:43px;height:43px;background:var(--stw-accent,#d8c8a8);color:#161616;border-color:transparent}
+.stw-progress,.stw-volume{width:100%;accent-color:var(--stw-accent,#d8c8a8)}
+.stw-time{display:flex;justify-content:space-between;margin-top:2px;font-size:10px;color:rgba(255,255,255,.58)}
+.stw-volume{margin-top:7px}
+.stw-player-footer{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:11px;color:rgba(255,255,255,.62)}
+.stw-manage{border:0;background:none;color:var(--stw-accent,#d8c8a8);cursor:pointer}
+
+.stw-settings{
+  max-width:920px;
+  color:#f4f1eb;
+  font-size:14px;
+  line-height:1.55;
+}
+.stw-settings *{color:inherit}
+.stw-settings input,.stw-settings select,.stw-settings textarea{
+  color:#f4f1eb!important;
+  -webkit-text-fill-color:#f4f1eb;
+}
+.stw-settings input::placeholder,.stw-settings textarea::placeholder{
+  color:rgba(244,241,235,.58)!important;
+  -webkit-text-fill-color:rgba(244,241,235,.58);
+}
+.stw-extension-header{
+  cursor:pointer;
+  color:#f5f2ec;
+}
+.stw-extension-header b{font-size:16px;color:#fff}
+.stw-settings-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:2px 0 10px;
+}
+.stw-title{font-size:20px;font-weight:800;color:#fff}
+.stw-subtitle{margin-top:3px;color:rgba(255,255,255,.7);font-size:12px}
+.stw-tabs{
+  display:flex;
+  gap:4px;
+  margin:0 0 12px;
+  border-bottom:1px solid rgba(255,255,255,.13);
+}
+.stw-tab{
+  appearance:none;
+  border:0;
+  border-bottom:2px solid transparent;
+  background:transparent!important;
+  color:rgba(255,255,255,.65)!important;
+  -webkit-text-fill-color:rgba(255,255,255,.65)!important;
+  padding:9px 13px;
+  cursor:pointer;
+}
+.stw-tab.active{
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  border-bottom-color:var(--stw-accent,#d8c8a8);
+}
+.stw-tab-panel[hidden]{display:none!important}
+.stw-card{
+  padding:14px;
+  margin:10px 0;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:13px;
+  background:rgba(0,0,0,.24);
+  color:#f3f0ea;
+}
+.stw-card-title{font-weight:800;margin-bottom:9px;color:#fff}
+.stw-help,.stw-empty{
+  font-size:12px;
+  line-height:1.65;
+  color:rgba(255,255,255,.68);
+}
+.stw-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.stw-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.stw-grid input,.stw-card select,.stw-code,.stw-global-skin-input{
+  width:100%;
+  min-height:36px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:9px;
+  background:rgba(0,0,0,.38);
+  color:#f4f1eb!important;
+  -webkit-text-fill-color:#f4f1eb;
+  padding:8px 10px;
+  outline:none;
+}
+.stw-grid input:focus,.stw-card select:focus,.stw-code:focus{
+  border-color:rgba(216,200,168,.58);
+}
+.stw-btn{
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:9px;
+  background:rgba(255,255,255,.07);
+  color:#f4f1eb!important;
+  -webkit-text-fill-color:#f4f1eb!important;
+  padding:7px 11px;
+  cursor:pointer;
+}
+.stw-btn:hover{background:rgba(255,255,255,.12)}
+.stw-primary{border-color:rgba(216,200,168,.55);color:#fff!important}
+.stw-danger{color:#ffb1b9!important}
+.stw-check{display:block;margin:8px 0;color:#f2eee7}
+.stw-check input{margin-right:7px}
+.stw-switch input{display:none}
+.stw-switch span{
+  display:block;width:44px;height:24px;border-radius:999px;background:#555;position:relative;cursor:pointer;
+}
+.stw-switch span:after{
+  content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .18s;
+}
+.stw-switch input:checked+span{background:var(--stw-accent,#d8c8a8)}
+.stw-switch input:checked+span:after{left:23px}
+.stw-character-list{display:flex;flex-direction:column;gap:7px;margin-top:10px;max-height:420px;overflow:auto;padding-right:2px}
+.stw-character-row{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;
+  background:rgba(255,255,255,.035);
+}
+.stw-character-row.is-current{border-color:rgba(216,200,168,.46);background:rgba(216,200,168,.06)}
+.stw-character-avatar{
+  width:38px;height:38px;flex:none;border-radius:9px;background-size:cover;background-position:center;
+  background-color:rgba(255,255,255,.08);
+}
 .stw-character-main{min-width:0;flex:1}
-.stw-character-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stw-character-meta{font-size:11px;opacity:.5;margin-top:2px}
-.stw-character-bind{white-space:nowrap;font-size:12px}
-.stw-character-bind input{margin-right:4px}
+.stw-character-name{font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stw-character-meta{margin-top:2px;font-size:11px;color:rgba(255,255,255,.58)}
+.stw-character-bind{white-space:nowrap;font-size:12px;color:#fff}
 .stw-character-edit{flex:none}
+.stw-character-sort{display:flex;gap:7px;align-items:center}
+.stw-character-sort label{color:rgba(255,255,255,.7);font-size:12px}
 .stw-theme-io{margin-top:8px}
-@media(max-width:600px){.stw-character-row{align-items:flex-start;flex-wrap:wrap}.stw-character-edit{margin-left:auto}}
+.stw-code{min-height:250px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}
+.stw-volume-line{display:flex;gap:10px;align-items:center;margin-top:12px;color:#fff}
+.stw-volume-line input{flex:1}
+.stw-song{display:flex;gap:8px;align-items:center;padding:8px;border-radius:9px;background:rgba(255,255,255,.04)}
+.stw-song-title{flex:1;min-width:0;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stw-song-url{max-width:220px;font-size:10px;color:rgba(255,255,255,.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+@media(max-width:600px){
+  #stw-root{right:10px;bottom:10px}
+  .stw-grid{grid-template-columns:1fr}
+  #stw-player{width:calc(100vw - 20px)}
+  .stw-character-row{flex-wrap:wrap}
+  .stw-character-edit{margin-left:auto}
+  .stw-song-url{display:none}
+}
