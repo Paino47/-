@@ -8,7 +8,7 @@
     <div class="stw-settings-head">
       <div>
         <div class="stw-title">角色音乐播放器</div>
-        <div class="stw-subtitle">全局与角色分开管理，角色歌单和皮肤互不混淆</div>
+        <div class="stw-subtitle">歌曲 / 皮肤分开管理；全局与角色分别绑定</div>
       </div>
     </div>
 
@@ -19,77 +19,139 @@
     </div>
 
     <div class="stw-tabs" role="tablist">
-      <button type="button" class="stw-tab active" data-tab="global" role="tab" aria-selected="true">全局</button>
-      <button type="button" class="stw-tab" data-tab="character" role="tab" aria-selected="false">角色</button>
+      <button type="button" class="stw-tab active" data-tab="songs">歌曲</button>
+      <button type="button" class="stw-tab" data-tab="skins">皮肤</button>
+      <button type="button" class="stw-tab" data-tab="settings">设置</button>
     </div>
 
-    <section class="stw-tab-panel active" data-panel="global">
-      <div class="stw-card">
-        <div class="stw-card-title">全局播放器</div>
-        <div id="stw-global-editor"></div>
+    <section class="stw-tab-panel active" data-panel="songs">
+      <div class="stw-subtabs">
+        <button type="button" class="stw-subtab active" data-subtab="songs-global">全局</button>
+        <button type="button" class="stw-subtab" data-subtab="songs-character">角色</button>
       </div>
 
-      <div class="stw-card">
-        <div class="stw-card-title">全局皮肤</div>
-        <div class="stw-row"><select id="stw-theme-select"></select><button type="button" id="stw-theme-new" class="stw-btn">新建</button><button type="button" id="stw-theme-duplicate" class="stw-btn">复制</button></div>
-        <div class="stw-row stw-theme-io">
-          <button type="button" id="stw-theme-import" class="stw-btn">导入主题 JSON</button>
-          <button type="button" id="stw-theme-export" class="stw-btn">导出主题 JSON</button>
-          <button type="button" id="stw-css-import" class="stw-btn">导入 CSS</button>
-          <button type="button" id="stw-css-export" class="stw-btn">导出 CSS</button>
-          <input id="stw-theme-file" type="file" accept=".json,application/json" hidden>
-          <input id="stw-css-file" type="file" accept=".css,text/css" hidden>
+      <div class="stw-subpanel active" data-subpanel="songs-global">
+        <div class="stw-card">
+          <div class="stw-card-title">全局歌曲</div>
+          <div class="stw-help">全局歌曲是全局歌单；同一首歌曲仍然可以在「歌曲 → 角色」中绑定给多个角色。</div>
+          <div class="stw-grid">
+            <input id="stw-song-title" placeholder="歌曲名字">
+            <input id="stw-song-url" placeholder="音频 URL">
+            <input id="stw-song-cover" placeholder="封面 URL（可留空）">
+          </div>
+          <button type="button" id="stw-song-add" class="stw-btn stw-primary">添加歌曲</button>
         </div>
-        <div class="stw-grid">
-          <input id="stw-theme-name" placeholder="主题名称">
-          <input id="stw-theme-author" placeholder="作者">
-          <input id="stw-theme-version" placeholder="版本号">
-          <input id="stw-theme-launcher" placeholder="悬浮按钮图片 URL（可留空）">
-          <input id="stw-theme-bg" placeholder="播放器背景图片 URL（可留空）">
-          <input id="stw-theme-accent" placeholder="强调色，例如 #d8c8a8">
+        <div class="stw-card">
+          <div class="stw-card-title">歌曲库</div>
+          <div id="stw-song-library" class="stw-playlist"></div>
         </div>
-        <textarea id="stw-theme-css" class="stw-code" spellcheck="false" placeholder="编辑全局播放器 CSS"></textarea>
-        <div class="stw-row"><button type="button" id="stw-theme-save" class="stw-btn stw-primary">保存并应用</button><button type="button" id="stw-theme-delete" class="stw-btn stw-danger">删除当前主题</button></div>
       </div>
 
-      <div class="stw-card">
-        <div class="stw-card-title">播放设置</div>
-        <div class="stw-setting-row"><span>只在已绑定角色时显示</span><label class="stw-switch"><input id="stw-bound-only" type="checkbox"><i></i></label></div>
-        <div class="stw-setting-row"><span>切换角色时自动切换歌单</span><label class="stw-switch"><input id="stw-auto-character" type="checkbox"><i></i></label></div>
-        <div class="stw-setting-row"><span>角色无专属歌曲时使用全局歌单</span><label class="stw-switch"><input id="stw-fallback-global" type="checkbox"><i></i></label></div>
-        <div class="stw-setting-row"><span>切换后尝试自动播放</span><label class="stw-switch"><input id="stw-autoplay" type="checkbox"><i></i></label></div>
-        <div class="stw-volume-line"><span>默认音量</span><input id="stw-volume" type="range" min="0" max="1" step="0.01"></div>
-        <div class="stw-row"><button type="button" id="stw-data-export" class="stw-btn">导出音乐数据</button><button type="button" id="stw-data-import" class="stw-btn">导入音乐数据</button><input id="stw-data-file" type="file" accept=".json,application/json" hidden></div>
+      <div class="stw-subpanel" data-subpanel="songs-character" hidden>
+        <div class="stw-card">
+          <div class="stw-card-title">角色歌曲绑定</div>
+          <div class="stw-help">读取酒馆全部角色。选择一个角色后，在右侧勾选歌曲。一个角色可以绑定很多歌曲，同一首歌曲也可以绑定很多角色。</div>
+          <div class="stw-row stw-character-tools">
+            <input id="stw-song-role-search" class="stw-character-search" placeholder="搜索角色卡">
+            <div class="stw-character-sort"><label>排序</label><select id="stw-song-role-sort">
+              <option value="name-asc">A-Z</option><option value="name-desc">Z-A</option>
+              <option value="newest">最新</option><option value="oldest">最老</option>
+              <option value="favorites">收藏</option><option value="recent">最近聊天</option>
+              <option value="most-chats">最多聊天</option><option value="least-chats">最少聊天</option>
+              <option value="most-tokens">最多 Tokens</option><option value="least-tokens">最少 Tokens</option>
+              <option value="random">随机</option>
+            </select></div>
+          </div>
+        </div>
+        <div class="stw-split-panel">
+          <div id="stw-song-characters" class="stw-character-list"></div>
+          <div id="stw-song-role-editor" class="stw-card stw-side-editor"></div>
+        </div>
       </div>
     </section>
 
-    <section class="stw-tab-panel" data-panel="character" hidden>
-      <div class="stw-card">
-        <div class="stw-section-head">
-          <div>
-            <div class="stw-card-title">角色</div>
-            <div class="stw-help">从酒馆已有角色卡中选择一个，所有角色绑定、歌曲和专属皮肤都在该角色里编辑。</div>
+    <section class="stw-tab-panel" data-panel="skins" hidden>
+      <div class="stw-subtabs">
+        <button type="button" class="stw-subtab active" data-subtab="skins-global">全局</button>
+        <button type="button" class="stw-subtab" data-subtab="skins-character">角色</button>
+      </div>
+
+      <div class="stw-subpanel active" data-subpanel="skins-global">
+        <div class="stw-card">
+          <div class="stw-section-head">
+            <div>
+              <div class="stw-card-title">全局皮肤</div>
+              <div class="stw-help">这里管理皮肤库，并选择当前全局皮肤。角色可以在「皮肤 → 角色」中绑定同一皮肤。</div>
+            </div>
+            <button type="button" id="stw-skin-new" class="stw-btn stw-primary">新建皮肤</button>
+          </div>
+          <div id="stw-skin-library" class="stw-playlist"></div>
+        </div>
+
+        <div class="stw-card">
+          <div class="stw-card-title">皮肤编辑</div>
+          <div class="stw-grid">
+            <input id="stw-skin-id" type="hidden">
+            <input id="stw-skin-name" placeholder="皮肤名称">
+            <input id="stw-skin-author" placeholder="作者">
+            <input id="stw-skin-version" placeholder="版本号">
+            <select id="stw-skin-type"><option value="css">CSS 皮肤</option><option value="url">外部 CSS URL</option></select>
+            <input id="stw-skin-url" placeholder="外部 CSS URL（选择外部 CSS 时填写）">
+            <select id="stw-skin-select"></select>
+          </div>
+          <textarea id="stw-skin-css" class="stw-code" spellcheck="false" placeholder="这里编辑当前皮肤 CSS"></textarea>
+          <div class="stw-row">
+            <button type="button" id="stw-skin-save" class="stw-btn stw-primary">保存并设为全局</button>
+            <button type="button" id="stw-skin-import" class="stw-btn">导入皮肤 JSON</button>
+            <button type="button" id="stw-skin-export" class="stw-btn">导出皮肤 JSON</button>
+            <button type="button" id="stw-css-import" class="stw-btn">导入 CSS</button>
+            <button type="button" id="stw-css-export" class="stw-btn">导出 CSS</button>
+            <input id="stw-skin-file" type="file" accept=".json,application/json" hidden>
+            <input id="stw-css-file" type="file" accept=".css,text/css" hidden>
           </div>
         </div>
-        <div class="stw-row stw-character-tools">
-          <input id="stw-character-search" class="stw-character-search" placeholder="搜索角色卡">
-          <div class="stw-character-sort"><label for="stw-character-sort">排序</label><select id="stw-character-sort">
-            <option value="name-asc">A-Z</option>
-            <option value="name-desc">Z-A</option>
-            <option value="newest">最新</option>
-            <option value="oldest">最老</option>
-            <option value="favorites">收藏</option>
-            <option value="recent">最近聊天</option>
-            <option value="most-chats">最多聊天</option>
-            <option value="least-chats">最少聊天</option>
-            <option value="most-tokens">最多 Tokens</option>
-            <option value="least-tokens">最少 Tokens</option>
-            <option value="random">随机</option>
-          </select></div>
-        </div>
-        <div id="stw-character-list" class="stw-character-list"></div>
       </div>
-      <div id="stw-role-editor" class="stw-card"></div>
+
+      <div class="stw-subpanel" data-subpanel="skins-character" hidden>
+        <div class="stw-card">
+          <div class="stw-card-title">角色皮肤绑定</div>
+          <div class="stw-help">读取全部角色。一个皮肤可以绑定多个角色；选择角色后，可绑定或切换该角色当前皮肤。</div>
+          <div class="stw-row stw-character-tools">
+            <input id="stw-skin-role-search" class="stw-character-search" placeholder="搜索角色卡">
+            <div class="stw-character-sort"><label>排序</label><select id="stw-skin-role-sort">
+              <option value="name-asc">A-Z</option><option value="name-desc">Z-A</option>
+              <option value="newest">最新</option><option value="oldest">最老</option>
+              <option value="favorites">收藏</option><option value="recent">最近聊天</option>
+              <option value="most-chats">最多聊天</option><option value="least-chats">最少聊天</option>
+              <option value="most-tokens">最多 Tokens</option><option value="least-tokens">最少 Tokens</option>
+              <option value="random">随机</option>
+            </select></div>
+          </div>
+        </div>
+        <div class="stw-split-panel">
+          <div id="stw-skin-characters" class="stw-character-list"></div>
+          <div id="stw-skin-role-editor" class="stw-card stw-side-editor"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stw-tab-panel" data-panel="settings" hidden>
+      <div class="stw-card">
+        <div class="stw-card-title">播放设置</div>
+        <div class="stw-setting-row"><span>只在当前角色有绑定歌曲时显示悬浮窗</span><label class="stw-switch"><input id="stw-show-only-bound" type="checkbox"><i></i></label></div>
+        <div class="stw-setting-row"><span>切换角色时自动切换歌曲</span><label class="stw-switch"><input id="stw-auto-character" type="checkbox"><i></i></label></div>
+        <div class="stw-setting-row"><span>角色没有歌曲时使用全局歌曲</span><label class="stw-switch"><input id="stw-fallback-global" type="checkbox"><i></i></label></div>
+        <div class="stw-setting-row"><span>切换后尝试自动播放</span><label class="stw-switch"><input id="stw-autoplay" type="checkbox"><i></i></label></div>
+        <div class="stw-volume-line"><span>默认音量</span><input id="stw-volume" type="range" min="0" max="1" step="0.01"></div>
+      </div>
+      <div class="stw-card">
+        <div class="stw-card-title">歌曲数据</div>
+        <div class="stw-row">
+          <button type="button" id="stw-data-export" class="stw-btn">导出歌曲绑定数据</button>
+          <button type="button" id="stw-data-import" class="stw-btn">导入歌曲绑定数据</button>
+          <input id="stw-data-file" type="file" accept=".json,application/json" hidden>
+        </div>
+      </div>
     </section>
   </div>
 </div>
