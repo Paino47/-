@@ -3,19 +3,19 @@
     <b>角色音乐播放器</b>
     <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
   </div>
+
   <div class="inline-drawer-content stw-settings">
     <div class="stw-settings-head">
       <div>
         <div class="stw-title">角色音乐播放器</div>
-        <div class="stw-subtitle">独立音乐 / 角色绑定 / 可导入导出的 CSS 皮肤</div>
+        <div class="stw-subtitle">角色绑定 / 角色歌单 / 独立 CSS 皮肤</div>
       </div>
     </div>
 
-    <div class="stw-card">
+    <div class="stw-card stw-runtime-card">
       <div class="stw-card-title">运行开关</div>
-      <label class="stw-check"><input id="stw-enabled" type="checkbox"> 插件开启</label>
-      <label class="stw-check"><input id="stw-floating-enabled" type="checkbox"> 悬浮窗开启</label>
-      <div class="stw-help">「插件开启」控制整个扩展；「悬浮窗开启」只控制右下角播放器入口和播放器本体。</div>
+      <div class="stw-setting-row"><span>插件开启</span><label class="stw-switch"><input id="stw-enabled" type="checkbox"><i></i></label></div>
+      <div class="stw-setting-row"><span>悬浮窗开启</span><label class="stw-switch"><input id="stw-floating-enabled" type="checkbox"><i></i></label></div>
     </div>
 
     <div class="stw-tabs" role="tablist">
@@ -26,12 +26,17 @@
 
     <section class="stw-tab-panel active" data-panel="music">
       <div class="stw-card">
-        <div class="stw-card-title">角色绑定</div>
+        <div class="stw-section-head">
+          <div>
+            <div class="stw-card-title">角色绑定</div>
+            <div class="stw-help">点击角色进入编辑；右侧开关直接绑定，不需要先切换当前角色。</div>
+          </div>
+          <button type="button" id="stw-global-music" class="stw-btn">编辑全局音乐</button>
+        </div>
+
         <div class="stw-row stw-character-tools">
           <input id="stw-character-search" class="stw-character-search" placeholder="搜索角色卡">
-          <div class="stw-character-sort">
-            <label for="stw-character-sort">排序</label>
-            <select id="stw-character-sort">
+          <div class="stw-character-sort"><label for="stw-character-sort">排序</label><select id="stw-character-sort">
             <option value="name-asc">A-Z</option>
             <option value="name-desc">Z-A</option>
             <option value="newest">最新</option>
@@ -43,45 +48,20 @@
             <option value="most-tokens">最多 Tokens</option>
             <option value="least-tokens">最少 Tokens</option>
             <option value="random">随机</option>
-          </select>
+          </select></div>
         </div>
-        </div>
-        <div class="stw-help">排序方式参照酒馆角色卡列表的字段：创建时间、最近聊天、聊天数量、Tokens 等。</div>
+
         <div id="stw-character-list" class="stw-character-list"></div>
       </div>
 
-      <div class="stw-card">
-        <div class="stw-card-title">当前角色</div>
-        <div id="stw-current-character" class="stw-help">当前没有选择角色</div>
-        <label class="stw-check"><input id="stw-bind" type="checkbox"> 绑定当前角色</label>
-        <label class="stw-check"><input id="stw-char-enabled" type="checkbox"> 当前角色启用播放器</label>
-        <label class="stw-check"><input id="stw-char-visible" type="checkbox"> 当前角色显示播放器</label>
-        <input id="stw-char-skin" class="stw-global-skin-input" placeholder="当前角色皮肤 CSS URL；留空=全局/默认皮肤">
-        <div class="stw-help">角色专属 CSS 优先于全局 CSS。</div>
-      </div>
+      <div id="stw-role-editor" class="stw-card"></div>
 
       <div class="stw-card">
-        <div class="stw-card-title">歌单</div>
-        <div class="stw-row">
-          <select id="stw-scope"><option value="global">全局歌单</option></select>
-          <button type="button" id="stw-use-current" class="stw-btn">使用当前角色</button>
-        </div>
-        <div class="stw-help">切换到任意角色后添加歌曲，歌曲 URL 会保存到该角色自己的歌单。</div>
-      </div>
-
-      <div class="stw-card">
-        <div class="stw-card-title">添加歌曲</div>
-        <div class="stw-grid">
-          <input id="stw-song-title" placeholder="歌曲名字">
-          <input id="stw-song-url" placeholder="音频 URL（mp3 / m4a / ogg / wav 等）">
-          <input id="stw-song-cover" placeholder="封面 URL（可留空）">
-        </div>
-        <button type="button" id="stw-add-song" class="stw-btn stw-primary">添加到当前歌单</button>
-      </div>
-
-      <div class="stw-card">
-        <div class="stw-card-title">当前歌单</div>
-        <div id="stw-playlist" class="stw-playlist"></div>
+        <div class="stw-card-title">自动播放</div>
+        <div class="stw-setting-row"><span>切换角色时自动切换歌单</span><label class="stw-switch"><input id="stw-auto-character" type="checkbox"><i></i></label></div>
+        <div class="stw-setting-row"><span>角色无专属歌曲时使用全局歌单</span><label class="stw-switch"><input id="stw-fallback-global" type="checkbox"><i></i></label></div>
+        <div class="stw-setting-row"><span>切换后尝试自动播放</span><label class="stw-switch"><input id="stw-autoplay" type="checkbox"><i></i></label></div>
+        <div class="stw-volume-line"><span>默认音量</span><input id="stw-volume" type="range" min="0" max="1" step="0.01"></div>
       </div>
     </section>
 
@@ -111,30 +91,16 @@
           <input id="stw-theme-accent" placeholder="强调色，例如 #d8c8a8">
         </div>
         <textarea id="stw-theme-css" class="stw-code" spellcheck="false" placeholder="在这里编辑播放器皮肤 CSS"></textarea>
-        <div class="stw-row">
-          <button type="button" id="stw-theme-save" class="stw-btn stw-primary">保存并应用</button>
-          <button type="button" id="stw-theme-delete" class="stw-btn stw-danger">删除当前主题</button>
-        </div>
+        <div class="stw-row"><button type="button" id="stw-theme-save" class="stw-btn stw-primary">保存并应用</button><button type="button" id="stw-theme-delete" class="stw-btn stw-danger">删除当前主题</button></div>
       </div>
     </section>
 
     <section class="stw-tab-panel" data-panel="settings" hidden>
       <div class="stw-card">
-        <div class="stw-card-title">作用范围</div>
-        <label class="stw-check"><input id="stw-bound-only" type="checkbox"> 只在已绑定角色时显示播放器</label>
-        <label class="stw-check"><input id="stw-global-visible" type="checkbox"> 允许全局播放器显示</label>
-        <input id="stw-global-skin" class="stw-global-skin-input" placeholder="全局皮肤 CSS URL；留空=插件内置皮肤">
-        <div class="stw-help">角色皮肤 ＞ 全局皮肤 ＞ 内置皮肤。</div>
+        <div class="stw-card-title">播放器作用</div>
+        <div class="stw-setting-row"><span>只在已绑定角色时显示</span><label class="stw-switch"><input id="stw-bound-only" type="checkbox"><i></i></label></div>
+        <div class="stw-help">开启后，只有右侧「绑定」开关打开的角色会显示播放器。</div>
       </div>
-
-      <div class="stw-card">
-        <div class="stw-card-title">播放设置</div>
-        <label class="stw-check"><input id="stw-auto-character" type="checkbox"> 切换角色时自动切换到该角色歌单</label>
-        <label class="stw-check"><input id="stw-fallback-global" type="checkbox"> 角色没有歌曲时使用全局歌单</label>
-        <label class="stw-check"><input id="stw-autoplay" type="checkbox"> 切换歌单后自动播放（浏览器可能限制自动播放）</label>
-        <div class="stw-volume-line"><span>默认音量</span><input id="stw-volume" type="range" min="0" max="1" step="0.01"></div>
-      </div>
-
       <div class="stw-card">
         <div class="stw-card-title">音乐数据</div>
         <div class="stw-row"><button type="button" id="stw-data-export" class="stw-btn">导出音乐数据</button><button type="button" id="stw-data-import" class="stw-btn">导入音乐数据</button><input id="stw-data-file" type="file" accept=".json,application/json" hidden></div>
