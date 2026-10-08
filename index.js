@@ -1043,7 +1043,7 @@ export async function init() {
   bindEvents();
   refresh();
 
-  console.info('[角色音乐播放器] v0.3.1 已加载');
+  console.info('[角色音乐播放器] v0.3.2 已加载');
 }
 
 if (typeof jQuery === 'function') {
