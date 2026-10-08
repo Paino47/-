@@ -43,9 +43,10 @@ let initialized = false;
 let songIndex = 0;
 let characterPollTimer = null;
 let lastCharacterKey = null;
+let selectedMusicKey = 'global';
 let coreCharacters = [];
 let coreCharacterId = -1;
-const VERSION = '0.3.2';
+const VERSION = '0.4.0';
 
 const ctx = () => {
   try { return SillyTavern.getContext(); } catch { return {}; }
@@ -537,6 +538,7 @@ function renderCharacterBindings() {
   const searchText = (document.querySelector('#stw-character-search')?.value || '').trim().toLowerCase();
   const filtered = chars().filter((item) => !searchText || item.name.toLowerCase().includes(searchText));
   const list = sortCharacters(filtered, sortMode);
+  const currentKey = charKey();
 
   box.innerHTML = '';
 
@@ -545,28 +547,28 @@ function renderCharacterBindings() {
     return;
   }
 
-  const currentKey = charKey();
-
   list.forEach((item) => {
     const settings = ensureChar(item.key, item.name);
     const row = document.createElement('div');
-    row.className = 'stw-character-row' + (item.key === currentKey ? ' is-current' : '');
+    row.className = 'stw-character-row' + (item.key === currentKey ? ' is-current' : '') + (item.key === selectedMusicKey ? ' is-selected' : '');
 
     const avatar = document.createElement('div');
     avatar.className = 'stw-character-avatar';
-    if (item.avatar) avatar.style.backgroundImage = 'url("' + item.avatar.replace(/"/g, '\\"') + '")';
+    if (item.avatar) avatar.style.backgroundImage = 'url("' + item.avatar.replace(/"/g, '\\\"') + '")';
 
     row.innerHTML = [
       '<div class="stw-character-main">',
         '<div class="stw-character-name"></div>',
-        '<div class="stw-character-meta">聊天 ',
-          formatCount(item.chat_size),
-          ' · 最近聊天 ',
-          item.date_last_chat ? new Date(item.date_last_chat).toLocaleDateString() : '无',
+        '<div class="stw-character-meta">',
+          '聊天 ', formatCount(item.chat_size),
+          ' · 最近 ', item.date_last_chat ? new Date(item.date_last_chat).toLocaleDateString() : '无',
+          ' · 歌曲 ', formatCount(settings.playlist.length),
         '</div>',
       '</div>',
-      '<label class="stw-character-bind"><input type="checkbox"> 绑定</label>',
-      '<button type="button" class="stw-btn stw-character-edit">编辑</button>',
+      '<label class="stw-inline-switch" title="绑定此角色">',
+        '<span>绑定</span>',
+        '<span class="stw-switch"><input type="checkbox"><i></i></span>',
+      '</label>',
     ].join('');
 
     row.prepend(avatar);
@@ -574,32 +576,90 @@ function renderCharacterBindings() {
 
     const checkbox = row.querySelector('input');
     checkbox.checked = settings.bound;
+    checkbox.addEventListener('click', (event) => event.stopPropagation());
     checkbox.addEventListener('change', () => {
       settings.bound = checkbox.checked;
       save();
       refresh();
       renderCharacterBindings();
-      refreshSettings(false);
+      renderMusicEditor();
     });
 
-    row.querySelector('.stw-character-edit').addEventListener('click', () => {
-      const scope = document.querySelector('#stw-scope');
-      if (!scope) return;
-      scope.value = item.key;
-      renderSelectedPlaylist();
-      scope.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.addEventListener('click', () => {
+      selectedMusicKey = item.key;
+      renderCharacterBindings();
+      renderMusicEditor();
     });
 
     box.appendChild(row);
   });
 }
 
-function renderSelectedPlaylist() {
-  const scope = document.querySelector('#stw-scope');
-  const box = document.querySelector('#stw-playlist');
-  if (!scope || !box) return;
+function renderMusicEditor() {
+  const box = document.querySelector('#stw-role-editor');
+  if (!box) return;
 
-  const list = scopeList(scope.value);
+  if (selectedMusicKey === 'global') {
+    box.innerHTML = [
+      '<div class="stw-editor-head">',
+        '<div><div class="stw-card-title">全局音乐</div><div class="stw-help">没有专属角色歌单时，可使用这里的全局歌曲。</div></div>',
+      '</div>',
+      '<div class="stw-setting-row"><span>全局播放器允许显示</span><label class="stw-switch"><input id="stw-editor-visible" type="checkbox"><i></i></label></div>',
+      '<input id="stw-editor-skin" class="stw-global-skin-input" placeholder="全局皮肤 CSS URL；留空=内置皮肤">',
+      '<div class="stw-song-editor">',
+        '<div class="stw-card-title">添加歌曲</div>',
+        '<div class="stw-grid"><input id="stw-song-title" placeholder="歌曲名字"><input id="stw-song-url" placeholder="音频 URL"><input id="stw-song-cover" placeholder="封面 URL（可留空）"></div>',
+        '<button type="button" class="stw-btn stw-primary" data-music-action="add-song">添加到全局歌单</button>',
+      '</div>',
+      '<div class="stw-card-title stw-editor-list-title">全局歌单</div>',
+      '<div id="stw-playlist" class="stw-playlist"></div>',
+    ].join('');
+
+    document.querySelector('#stw-editor-visible').checked = S.globalVisible;
+    document.querySelector('#stw-editor-skin').value = S.globalSkinUrl || '';
+    renderSelectedPlaylist();
+    return;
+  }
+
+  const item = chars().find((x) => x.key === selectedMusicKey);
+  if (!item) {
+    selectedMusicKey = 'global';
+    renderMusicEditor();
+    return;
+  }
+
+  const settings = ensureChar(item.key, item.name);
+  box.innerHTML = [
+    '<div class="stw-editor-head">',
+      '<div><div class="stw-card-title">编辑角色：<span id="stw-editor-role-name"></span></div><div class="stw-help">这里直接管理这个角色的绑定、播放器显示、CSS 和歌曲 URL。</div></div>',
+      '<button type="button" class="stw-btn" data-music-action="use-current">跳到当前角色</button>',
+    '</div>',
+    '<div class="stw-setting-row"><span>绑定此角色</span><label class="stw-switch"><input id="stw-editor-bind" type="checkbox"><i></i></label></div>',
+    '<div class="stw-setting-row"><span>启用此角色播放器</span><label class="stw-switch"><input id="stw-editor-enabled" type="checkbox"><i></i></label></div>',
+    '<div class="stw-setting-row"><span>显示此角色播放器</span><label class="stw-switch"><input id="stw-editor-role-visible" type="checkbox"><i></i></label></div>',
+    '<input id="stw-editor-skin" class="stw-global-skin-input" placeholder="角色专属皮肤 CSS URL；留空=全局/内置皮肤">',
+    '<div class="stw-song-editor">',
+      '<div class="stw-card-title">添加歌曲</div>',
+      '<div class="stw-grid"><input id="stw-song-title" placeholder="歌曲名字"><input id="stw-song-url" placeholder="音频 URL"><input id="stw-song-cover" placeholder="封面 URL（可留空）"></div>',
+      '<button type="button" class="stw-btn stw-primary" data-music-action="add-song">添加到此角色</button>',
+    '</div>',
+    '<div class="stw-card-title stw-editor-list-title">角色歌单</div>',
+    '<div id="stw-playlist" class="stw-playlist"></div>',
+  ].join('');
+
+  document.querySelector('#stw-editor-role-name').textContent = item.name;
+  document.querySelector('#stw-editor-bind').checked = settings.bound;
+  document.querySelector('#stw-editor-enabled').checked = settings.enabled !== false;
+  document.querySelector('#stw-editor-role-visible').checked = settings.visible !== false;
+  document.querySelector('#stw-editor-skin').value = settings.skinUrl || '';
+  renderSelectedPlaylist();
+}
+
+function renderSelectedPlaylist() {
+  const box = document.querySelector('#stw-playlist');
+  if (!box) return;
+
+  const list = scopeList(selectedMusicKey);
   box.innerHTML = list.length ? '' : '<div class="stw-empty">这里还没有歌曲。</div>';
 
   list.forEach((song, index) => {
@@ -608,22 +668,24 @@ function renderSelectedPlaylist() {
     row.innerHTML = [
       '<div class="stw-song-title"></div>',
       '<div class="stw-song-url"></div>',
-      '<button type="button" class="stw-btn">播放</button>',
-      '<button type="button" class="stw-btn stw-danger">删除</button>',
+      '<button type="button" class="stw-btn" data-song-action="play">播放</button>',
+      '<button type="button" class="stw-btn stw-danger" data-song-action="delete">删除</button>',
     ].join('');
 
     row.querySelector('.stw-song-title').textContent = song.title || '未命名歌曲';
     row.querySelector('.stw-song-url').textContent = song.url || '';
-    row.querySelectorAll('button')[0].addEventListener('click', () => {
+
+    row.querySelector('[data-song-action="play"]').addEventListener('click', () => {
       songIndex = index;
       audio.src = song.url;
       audio.play().catch(() => {});
       refresh();
     });
-    row.querySelectorAll('button')[1].addEventListener('click', () => {
+
+    row.querySelector('[data-song-action="delete"]').addEventListener('click', () => {
       list.splice(index, 1);
       save();
-      renderSelectedPlaylist();
+      renderMusicEditor();
       refresh();
     });
 
@@ -633,7 +695,7 @@ function renderSelectedPlaylist() {
 
 function refreshSettings(refreshCharacterList = true) {
   const q = (selector) => document.querySelector(selector);
-  if (!q('#stw-scope')) return;
+  if (!q('#stw-character-list')) return;
 
   q('#stw-enabled').checked = S.enabled;
   q('#stw-floating-enabled').checked = S.floatingEnabled;
@@ -642,44 +704,21 @@ function refreshSettings(refreshCharacterList = true) {
   q('#stw-autoplay').checked = S.autoplay;
   q('#stw-volume').value = S.volume;
   q('#stw-bound-only').checked = S.scope === 'bound';
-  q('#stw-global-visible').checked = S.globalVisible;
-  q('#stw-global-skin').value = S.globalSkinUrl || '';
 
-  const currentKey = charKey();
-  const currentSettings = currentKey ? ensureChar(currentKey, charName()) : null;
-
-  q('#stw-current-character').textContent = charName() || '当前没有选择角色';
-  q('#stw-bind').checked = !!currentSettings?.bound;
-  q('#stw-char-enabled').checked = currentSettings?.enabled !== false;
-  q('#stw-char-visible').checked = currentSettings?.visible !== false;
-  q('#stw-char-skin').value = currentSettings?.skinUrl || '';
-
-  const scope = q('#stw-scope');
-  const oldValue = scope.value;
-  scope.innerHTML = '<option value="global">全局歌单</option>';
-
-  chars().forEach((item) => {
-    const option = document.createElement('option');
-    option.value = item.key;
-    option.textContent = '角色：' + item.name;
-    scope.appendChild(option);
-  });
-
-  if ([...scope.options].some((option) => option.value === oldValue)) {
-    scope.value = oldValue;
-  }
-
-  renderSelectedPlaylist();
+  if (refreshCharacterList) renderCharacterBindings();
+  renderMusicEditor();
 
   const themeSelect = q('#stw-theme-select');
-  themeSelect.innerHTML = '';
-  Object.values(S.themes).forEach((theme) => {
-    const option = document.createElement('option');
-    option.value = theme.id;
-    option.textContent = theme.name;
-    themeSelect.appendChild(option);
-  });
-  themeSelect.value = S.currentTheme;
+  if (themeSelect) {
+    themeSelect.innerHTML = '';
+    Object.values(S.themes).forEach((theme) => {
+      const option = document.createElement('option');
+      option.value = theme.id;
+      option.textContent = theme.name;
+      themeSelect.appendChild(option);
+    });
+    themeSelect.value = S.currentTheme;
+  }
 
   const theme = S.themes[S.currentTheme] || DEFAULT_THEME;
   q('#stw-theme-name').value = theme.name || '';
@@ -689,12 +728,11 @@ function refreshSettings(refreshCharacterList = true) {
   q('#stw-theme-bg').value = theme.variables?.backgroundImage || '';
   q('#stw-theme-accent').value = theme.variables?.accent || '#d8c8a8';
   q('#stw-theme-css').value = theme.css || '';
-
-  if (refreshCharacterList) renderCharacterBindings();
 }
 
 function bindSettings() {
   const q = (selector) => document.querySelector(selector);
+  const host = document.querySelector('.stw-settings');
 
   const tabs = document.querySelectorAll('.stw-tab');
   const panels = document.querySelectorAll('.stw-tab-panel');
@@ -705,7 +743,6 @@ function bindSettings() {
       tab.classList.toggle('active', active);
       tab.setAttribute('aria-selected', active ? 'true' : 'false');
     });
-
     panels.forEach((panel) => {
       panel.classList.toggle('active', panel.dataset.panel === tabName);
       panel.hidden = panel.dataset.panel !== tabName;
@@ -720,7 +757,6 @@ function bindSettings() {
       activateTab(tab.dataset.tab);
     });
   });
-
   activateTab('music');
 
   q('#stw-enabled').addEventListener('change', (event) => {
@@ -764,94 +800,89 @@ function bindSettings() {
     refresh();
   });
 
-  q('#stw-global-visible').addEventListener('change', (event) => {
-    S.globalVisible = event.target.checked;
-    save();
-    refresh();
-  });
+  if (host) {
+    host.addEventListener('click', (event) => {
+      const action = event.target.closest('[data-music-action]')?.dataset.musicAction;
+      if (!action) return;
 
-  q('#stw-global-skin').addEventListener('change', (event) => {
-    S.globalSkinUrl = event.target.value.trim();
-    save();
-    refresh();
-  });
+      if (action === 'use-current') {
+        const key = charKey();
+        if (key) {
+          selectedMusicKey = key;
+          renderCharacterBindings();
+          renderMusicEditor();
+        }
+        return;
+      }
 
-  q('#stw-bind').addEventListener('change', (event) => {
-    const key = charKey();
-    if (!key) return;
-    ensureChar(key, charName()).bound = event.target.checked;
-    save();
-    refresh();
-    refreshSettings();
-  });
+      if (action === 'add-song') {
+        const title = q('#stw-song-title')?.value.trim();
+        const url = q('#stw-song-url')?.value.trim();
+        const cover = q('#stw-song-cover')?.value.trim();
+        if (!title || !url) return;
 
-  q('#stw-char-visible').addEventListener('change', (event) => {
-    const key = charKey();
-    if (!key) return;
-    ensureChar(key, charName()).visible = event.target.checked;
-    save();
-    refresh();
-  });
+        scopeList(selectedMusicKey).push({
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+          title,
+          url,
+          cover,
+        });
+        save();
+        renderMusicEditor();
+        refresh();
+      }
+    });
 
-  q('#stw-char-enabled').addEventListener('change', (event) => {
-    const key = charKey();
-    if (!key) return;
-    ensureChar(key, charName()).enabled = event.target.checked;
-    save();
-    refresh();
-  });
+    host.addEventListener('change', (event) => {
+      const id = event.target.id;
+      if (id === 'stw-editor-bind' && selectedMusicKey !== 'global') {
+        ensureChar(selectedMusicKey).bound = event.target.checked;
+        save();
+        renderCharacterBindings();
+        renderMusicEditor();
+        refresh();
+      }
+      if (id === 'stw-editor-enabled' && selectedMusicKey !== 'global') {
+        ensureChar(selectedMusicKey).enabled = event.target.checked;
+        save();
+        refresh();
+      }
+      if (id === 'stw-editor-role-visible' && selectedMusicKey !== 'global') {
+        ensureChar(selectedMusicKey).visible = event.target.checked;
+        save();
+        refresh();
+      }
+      if (id === 'stw-editor-skin' && selectedMusicKey !== 'global') {
+        ensureChar(selectedMusicKey).skinUrl = event.target.value.trim();
+        save();
+        refresh();
+      }
+      if (id === 'stw-editor-visible' && selectedMusicKey === 'global') {
+        S.globalVisible = event.target.checked;
+        save();
+        refresh();
+      }
+      if (id === 'stw-editor-skin' && selectedMusicKey === 'global') {
+        S.globalSkinUrl = event.target.value.trim();
+        save();
+        refresh();
+      }
+    });
+  }
 
-  q('#stw-char-skin').addEventListener('change', (event) => {
-    const key = charKey();
-    if (!key) return;
-    ensureChar(key, charName()).skinUrl = event.target.value.trim();
-    save();
-    refresh();
+  q('#stw-global-music').addEventListener('click', () => {
+    selectedMusicKey = 'global';
+    renderCharacterBindings();
+    renderMusicEditor();
   });
 
   q('#stw-character-sort').addEventListener('change', () => renderCharacterBindings());
   q('#stw-character-search').addEventListener('input', () => renderCharacterBindings());
 
-  q('#stw-scope').addEventListener('change', () => {
-    renderSelectedPlaylist();
-  });
-
-  q('#stw-use-current').addEventListener('click', () => {
-    const key = charKey();
-    if (!key) return;
-    q('#stw-scope').value = key;
-    renderSelectedPlaylist();
-  });
-
-  q('#stw-add-song').addEventListener('click', () => {
-    const title = q('#stw-song-title').value.trim();
-    const url = q('#stw-song-url').value.trim();
-    const cover = q('#stw-song-cover').value.trim();
-
-    if (!title || !url) return;
-
-    scopeList(q('#stw-scope').value).push({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-      title,
-      url,
-      cover,
-    });
-
-    q('#stw-song-title').value = '';
-    q('#stw-song-url').value = '';
-    q('#stw-song-cover').value = '';
-
-    save();
-    renderSelectedPlaylist();
-    refresh();
-    renderCharacterBindings();
-  });
-
   q('#stw-theme-select').addEventListener('change', (event) => {
     S.currentTheme = event.target.value;
     save();
     applyTheme();
-    refreshSettings(false);
   });
 
   q('#stw-theme-new').addEventListener('click', () => {
@@ -907,13 +938,11 @@ function bindSettings() {
   q('#stw-theme-file').addEventListener('change', (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = () => {
       try {
         const theme = JSON.parse(reader.result);
         if (!theme?.name || typeof theme.css !== 'string') return;
-
         theme.schemaVersion = 1;
         theme.id = String(theme.id || ('theme-' + Date.now().toString(36))).replace(/[^a-zA-Z0-9_-]/g, '-');
         S.themes[theme.id] = theme;
@@ -936,7 +965,6 @@ function bindSettings() {
   q('#stw-css-file').addEventListener('change', (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = () => {
       const theme = S.themes[S.currentTheme] || clone(DEFAULT_THEME);
@@ -968,7 +996,6 @@ function bindSettings() {
   q('#stw-data-file').addEventListener('change', (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -985,6 +1012,7 @@ function bindSettings() {
     reader.readAsText(file);
   });
 }
+
 
 function openSettings() {
   const button = document.querySelector('#extensionsMenuButton');
@@ -1043,7 +1071,7 @@ export async function init() {
   bindEvents();
   refresh();
 
-  console.info('[角色音乐播放器] v0.3.2 已加载');
+  console.info('[角色音乐播放器] v0.4.0 已加载');
 }
 
 if (typeof jQuery === 'function') {
