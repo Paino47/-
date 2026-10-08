@@ -117,6 +117,13 @@ function charName() {
   return ch?.name || ch?.data?.name || '';
 }
 
+function toTimestamp(value) {
+  const number = Number(value);
+  if (Number.isFinite(number) && number > 0) return number;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function normalizeCharacter(ch, index) {
   return {
     raw: ch,
@@ -124,8 +131,8 @@ function normalizeCharacter(ch, index) {
     name: ch.name || ch.data?.name || ('角色 ' + (index + 1)),
     avatar: ch.avatar || '',
     index,
-    create_date: Number(ch.create_date) || 0,
-    date_last_chat: Number(ch.date_last_chat) || 0,
+    create_date: toTimestamp(ch.create_date),
+    date_last_chat: toTimestamp(ch.date_last_chat),
     chat_size: Number(ch.chat_size) || 0,
     data_size: Number(ch.data_size) || 0,
     fav: !!ch.fav,
@@ -273,7 +280,7 @@ function applyTheme() {
     '--stw-button:' + (v.button || 'rgba(255,255,255,.08)') + ';' +
     '--stw-launcher-image:' + (launcher ? 'url("' + launcher + '")' : 'none') + ';' +
     '--stw-bg-image:' + (bg ? 'url("' + bg + '")' : 'none') + '}' +
-    '#stw-root{' + (theme.css || '') + '}';
+    '\\n' + (theme.css || '');
 }
 
 function build() {
@@ -487,7 +494,9 @@ function renderCharacterBindings() {
   if (!box) return;
 
   const sortMode = document.querySelector('#stw-character-sort')?.value || 'name-asc';
-  const list = sortCharacters(chars(), sortMode);
+  const searchText = (document.querySelector('#stw-character-search')?.value || '').trim().toLowerCase();
+  const filtered = chars().filter((item) => !searchText || item.name.toLowerCase().includes(searchText));
+  const list = sortCharacters(filtered, sortMode);
 
   box.innerHTML = '';
 
@@ -761,6 +770,7 @@ function bindSettings() {
   });
 
   q('#stw-character-sort').addEventListener('change', () => renderCharacterBindings());
+  q('#stw-character-search').addEventListener('input', () => renderCharacterBindings());
 
   q('#stw-scope').addEventListener('change', () => {
     renderSelectedPlaylist();
@@ -989,7 +999,7 @@ export async function init() {
   bindEvents();
   refresh();
 
-  console.info('[角色音乐播放器] v0.3.0 已加载');
+  console.info('[角色音乐播放器] v0.3.1 已加载');
 }
 
 if (typeof jQuery === 'function') {
