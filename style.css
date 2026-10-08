@@ -262,3 +262,17 @@
   .stw-section-head,.stw-editor-head{align-items:flex-start;flex-direction:column}
   .stw-section-head .stw-btn,.stw-editor-head .stw-btn{width:100%}
 }
+
+.stw-tab-panel{min-width:0}
+.stw-character-row{
+  appearance:none;
+  -webkit-appearance:none;
+  width:100%;
+  margin:0;
+  border:1px solid rgba(255,255,255,.12);
+  text-align:left;
+  color:#fff;
+}
+.stw-character-row .stw-character-main{display:block}
+.stw-character-arrow{flex:none;font-size:22px;line-height:1;color:rgba(255,255,255,.55)}
+.stw-character-row:focus-visible{outline:2px solid rgba(216,200,168,.65);outline-offset:1px}
